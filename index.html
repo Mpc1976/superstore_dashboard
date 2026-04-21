@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Superstore Analytics — Dashboard en Vivo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#21262d;--card:#161b22;
+  --b1:rgba(48,54,61,1);--b2:rgba(110,118,129,0.4);
+  --t1:#e6edf3;--t2:#8b949e;--t3:#484f58;
+  --blue:#58a6ff;--teal:#3fb950;--amber:#d29922;--red:#f85149;
+  --purple:#bc8cff;--orange:#f0883e;
+  --font:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:var(--bg);color:var(--t1);min-height:100vh;font-size:14px}
+
+/* SETUP SCREEN */
+.setup-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.setup-card{background:var(--bg2);border:1px solid var(--b1);border-radius:16px;padding:36px;max-width:560px;width:100%}
+.setup-logo{font-size:22px;font-weight:700;margin-bottom:6px}
+.setup-logo span{color:var(--blue)}
+.setup-subtitle{font-size:13px;color:var(--t2);margin-bottom:28px;line-height:1.6}
+.setup-label{font-size:12px;font-weight:500;color:var(--t2);margin-bottom:6px;display:block}
+.setup-input{width:100%;background:var(--bg3);border:1px solid var(--b1);border-radius:8px;padding:10px 14px;font-family:var(--font);font-size:13px;color:var(--t1);outline:none;transition:.15s;margin-bottom:14px}
+.setup-input:focus{border-color:var(--blue)}
+.setup-input::placeholder{color:var(--t3)}
+.setup-btn{width:100%;padding:12px;background:var(--blue);border:none;border-radius:8px;color:#fff;font-family:var(--font);font-size:14px;font-weight:600;cursor:pointer;transition:.15s;margin-top:6px}
+.setup-btn:hover{background:#79b8ff}
+.setup-btn:disabled{background:var(--bg3);color:var(--t3);cursor:not-allowed}
+.setup-help{font-size:11px;color:var(--t3);margin-top:16px;line-height:1.7;background:var(--bg3);border-radius:8px;padding:12px 14px}
+.setup-help strong{color:var(--t2)}
+.setup-error{background:rgba(248,81,73,.1);border:1px solid rgba(248,81,73,.3);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--red);margin-top:12px;display:none}
+.setup-progress{text-align:center;margin-top:16px;font-size:12px;color:var(--t2);display:none}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--b1);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;margin-right:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* STATUS BAR */
+.statusbar{background:var(--bg2);border-bottom:1px solid var(--b1);padding:6px 20px;font-size:11px;color:var(--t2);display:flex;align-items:center;gap:12px}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse2 2s infinite;flex-shrink:0}
+@keyframes pulse2{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.8)}}
+.status-dot.loading{background:var(--amber);animation:spin .8s linear infinite}
+.status-dot.error{background:var(--red);animation:none}
+.status-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+.reload-btn{padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;border:1px solid var(--b1);background:var(--bg3);color:var(--t2);font-family:var(--font);transition:.15s}
+.reload-btn:hover{color:var(--t1);border-color:var(--b2)}
+.change-src{font-size:11px;color:var(--blue);cursor:pointer;border:none;background:none;font-family:var(--font)}
+.change-src:hover{text-decoration:underline}
+
+/* TOPBAR */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--b1);height:50px;display:flex;align-items:center;padding:0 20px;gap:14px}
+.logo{font-size:15px;font-weight:700;color:var(--t1);white-space:nowrap}
+.logo span{color:var(--blue)}
+.role-tabs{display:flex;gap:2px;background:var(--bg3);border-radius:8px;padding:3px}
+.rtab{padding:5px 13px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;color:var(--t2);border:none;background:none;transition:.15s;white-space:nowrap}
+.rtab:hover{color:var(--t1)}
+.rtab.active{background:var(--blue);color:#fff}
+.topbar-r{margin-left:auto;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.tbtn{padding:4px 11px;border-radius:6px;font-size:11px;font-weight:500;cursor:pointer;border:1px solid var(--b1);background:var(--bg3);color:var(--t2);font-family:var(--font);transition:.15s;white-space:nowrap}
+.tbtn:hover{color:var(--t1);border-color:var(--b2)}
+.tbtn.exp{border-color:rgba(63,185,80,.4);background:rgba(63,185,80,.1);color:var(--teal)}
+.tbtn.exp:hover{background:rgba(63,185,80,.2)}
+
+/* FILTER BAR */
+.filterbar{background:var(--bg2);border-bottom:1px solid var(--b1);padding:7px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fl{display:flex;align-items:center;gap:5px}
+.fl label{font-size:11px;color:var(--t2);white-space:nowrap}
+select{background:var(--bg3);border:1px solid var(--b1);color:var(--t1);font-family:var(--font);font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;outline:none}
+select:hover{border-color:var(--b2)}
+.filter-reset{font-size:11px;color:var(--blue);cursor:pointer;border:none;background:none;font-family:var(--font);padding:4px 8px}
+.active-filters{font-size:10px;color:var(--t3);margin-left:auto}
+
+/* MAIN */
+.main{padding:16px 20px;max-width:1400px;margin:0 auto}
+.role-panel{display:none}
+.role-panel.active{display:block}
+
+/* KPI ROW */
+.krow{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}
+.kcard{background:var(--card);border:1px solid var(--b1);border-radius:10px;padding:13px 15px;position:relative;overflow:hidden;transition:.15s;cursor:default}
+.kcard:hover{border-color:var(--b2)}
+.kcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.kcard.bl::before{background:var(--blue)}.kcard.tl::before{background:var(--teal)}
+.kcard.am::before{background:var(--amber)}.kcard.rd::before{background:var(--red)}
+.kcard.pu::before{background:var(--purple)}.kcard.or::before{background:var(--orange)}
+.klbl{font-size:9px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--t2);margin-bottom:5px}
+.kval{font-size:21px;font-weight:700;letter-spacing:-0.5px;line-height:1}
+.ksub{font-size:10px;color:var(--t2);margin-top:3px}
+.kdelta{display:inline-flex;align-items:center;gap:2px;font-size:10px;font-weight:600;padding:2px 6px;border-radius:6px;margin-top:5px}
+.up{background:rgba(63,185,80,.12);color:var(--teal)}
+.dn{background:rgba(248,81,73,.12);color:var(--red)}
+.wn{background:rgba(210,153,34,.12);color:var(--amber)}
+
+/* TOOLTIP */
+.tip{position:relative}
+.tip .tt{visibility:hidden;opacity:0;position:absolute;z-index:500;bottom:calc(100%+8px);left:50%;transform:translateX(-50%);background:#0d1117;border:1px solid var(--b2);border-radius:8px;padding:10px 14px;font-size:11px;color:var(--t1);white-space:nowrap;pointer-events:none;transition:.15s;min-width:210px;line-height:1.7;box-shadow:0 8px 24px rgba(0,0,0,.6)}
+.tip:hover .tt{visibility:visible;opacity:1}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:12px;margin-bottom:12px}
+.g2e{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-bottom:12px}
+.g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:12px}
+.g4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:12px}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--b1);border-radius:10px;padding:15px}
+.card-title{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:11px;display:flex;align-items:center;justify-content:space-between}
+.card-note{font-size:10px;color:var(--t3);font-weight:400}
+.cw{position:relative}
+
+/* ALERT */
+.alert{background:rgba(248,81,73,.07);border:1px solid rgba(248,81,73,.2);border-radius:8px;padding:10px 14px;margin-bottom:14px;display:flex;gap:8px;font-size:12px;align-items:flex-start}
+.adot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:3px;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* PROGRESS */
+.pr{display:flex;align-items:center;gap:8px;margin-bottom:8px;font-size:11px}
+.pl{width:100px;flex-shrink:0;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pb{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.pf{height:100%;border-radius:2px}
+.pv{width:48px;text-align:right;font-size:11px;font-weight:500}
+
+/* TABLE */
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{background:var(--bg3);color:var(--t2);padding:7px 10px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--b1)}
+td{padding:8px 10px;border-bottom:1px solid rgba(48,54,61,.5);color:var(--t1)}
+tr:hover td{background:rgba(88,166,255,.04)}
+.pill{display:inline-block;padding:1px 7px;border-radius:5px;font-size:10px;font-weight:600}
+.pok{background:rgba(63,185,80,.12);color:var(--teal)}
+.pwn{background:rgba(210,153,34,.12);color:var(--amber)}
+.pbd{background:rgba(248,81,73,.12);color:var(--red)}
+
+/* DRILL */
+.dbtn{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--blue);cursor:pointer;border:none;background:none;font-family:var(--font);padding:4px 0;margin-top:6px;opacity:.7;transition:.15s}
+.dbtn:hover{opacity:1}
+.dpanel{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--b1)}
+.dpanel.open{display:block}
+
+/* SECTION NAV */
+.section-nav{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--b1)}
+.snav{padding:6px 13px;font-size:12px;font-weight:500;color:var(--t2);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:.15s}
+.snav:hover{color:var(--t1)}
+.snav.active{color:var(--blue);border-bottom-color:var(--blue)}
+.spanel{display:none}.spanel.active{display:block}
+
+/* INSIGHT */
+.insight-card{border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:12px;line-height:1.7;border-left:3px solid transparent}
+.ins-red{background:rgba(248,81,73,.07);border-left-color:var(--red)}
+.ins-amb{background:rgba(210,153,34,.07);border-left-color:var(--amber)}
+.ins-grn{background:rgba(63,185,80,.07);border-left-color:var(--teal)}
+.ins-blu{background:rgba(88,166,255,.07);border-left-color:var(--blue)}
+.ins-title{font-weight:600;margin-bottom:4px}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:var(--bg2);border:1px solid var(--b1);border-radius:12px;padding:22px;max-width:580px;width:90%;max-height:82vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{cursor:pointer;color:var(--t2);font-size:18px;border:none;background:none}
+.guide-item{display:flex;gap:10px;padding:10px;background:var(--bg3);border-radius:8px;margin-bottom:8px;font-size:12px;line-height:1.6}
+.guide-icon{font-size:15px;flex-shrink:0;width:20px;text-align:center}
+.guide-title{font-size:13px;font-weight:600;color:var(--t1);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--b1)}
+
+/* LEGEND */
+.leg{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:10px;color:var(--t2)}
+.ld{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:3px;flex-shrink:0}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bg3);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ PANTALLA DE CONFIGURACIÓN ══════════════ -->
+<div id="setup-screen" class="setup-screen">
+  <div class="setup-card">
+    <div class="setup-logo">Super<span>store</span> Analytics</div>
+    <div class="setup-subtitle">
+      Dashboard en tiempo real conectado a tu Google Sheets.<br>
+      Pega el enlace de tu hoja y los datos se cargarán automáticamente.<br>
+      Cada vez que actualices la hoja, el dashboard se actualiza solo.
+    </div>
+
+    <label class="setup-label">Enlace de tu Google Sheets (o ID de la hoja)</label>
+    <input type="text" id="sheet-url" class="setup-input"
+      placeholder="https://docs.google.com/spreadsheets/d/TU_ID_AQUI/edit"
+      value="">
+
+    <label class="setup-label">Nombre exacto de la pestaña con los datos</label>
+    <input type="text" id="sheet-tab" class="setup-input"
+      placeholder="Datos_Procesados"
+      value="Datos_Procesados">
+
+    <button class="setup-btn" id="connect-btn" onclick="connectSheet()">
+      Conectar y cargar datos
+    </button>
+
+    <div class="setup-error" id="setup-error"></div>
+    <div class="setup-progress" id="setup-progress">
+      <span class="spinner"></span>
+      <span id="progress-text">Conectando con Google Sheets...</span>
+    </div>
+
+    <div class="setup-help">
+      <strong>¿Cómo obtener el enlace?</strong><br>
+      1. Abre tu Google Sheet con los datos limpios<br>
+      2. Arriba a la derecha → botón <strong>Compartir</strong><br>
+      3. Cambia acceso a <strong>"Cualquier persona con el enlace puede ver"</strong><br>
+      4. Copia el enlace y pégalo aquí<br><br>
+      <strong>¿La hoja tiene los datos limpios?</strong><br>
+      El dashboard espera estas columnas: Ventas, Beneficio, Region, Categoria, Segmento, Anio, Trimestre, Mes, Modo_Envio, Sub_Categoria, Tramo_Descuento, Margen_Pct, Cantidad.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DASHBOARD PRINCIPAL ══════════════ -->
+<div id="dashboard" style="display:none">
+
+<!-- STATUS BAR -->
+<div class="statusbar">
+  <div class="status-dot" id="status-dot"></div>
+  <span id="status-text">Datos cargados</span>
+  <span id="status-rows" style="color:var(--t3)"></span>
+  <span id="status-time" style="color:var(--t3)"></span>
+  <div class="status-r">
+    <button class="reload-btn" onclick="reloadData()">⟳ Actualizar datos</button>
+    <button class="change-src" onclick="showSetup()">Cambiar fuente</button>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo">Super<span>store</span> Analytics</div>
+  <div class="role-tabs">
+    <button class="rtab active" onclick="switchRole('ceo',this)">Director Ejecutivo</button>
+    <button class="rtab" onclick="switchRole('ventas',this)">Director de Ventas</button>
+    <button class="rtab" onclick="switchRole('producto',this)">Gerente de Producto</button>
+  </div>
+  <div class="topbar-r">
+    <button class="tbtn" onclick="showModal('guide')">📖 Guía de uso</button>
+    <button class="tbtn" onclick="showModal('insights')">💡 Insights</button>
+    <button class="tbtn" onclick="showModal('mejoras')">🚀 Mejoras</button>
+    <button class="tbtn exp" onclick="exportCSV()">⬇ Exportar CSV</button>
+  </div>
+</header>
+
+<!-- FILTER BAR -->
+<div class="filterbar">
+  <div class="fl"><label>Período</label>
+    <select id="f-anio" onchange="applyFilters()">
+      <option value="all">Todos los años</option>
+    </select>
+  </div>
+  <div class="fl"><label>Trimestre</label>
+    <select id="f-trim" onchange="applyFilters()">
+      <option value="all">Todos</option>
+      <option value="T1">T1 (Ene–Mar)</option>
+      <option value="T2">T2 (Abr–Jun)</option>
+      <option value="T3">T3 (Jul–Sep)</option>
+      <option value="T4">T4 (Oct–Dic)</option>
+    </select>
+  </div>
+  <div class="fl"><label>Región</label>
+    <select id="f-region" onchange="applyFilters()">
+      <option value="all">Todas</option>
+    </select>
+  </div>
+  <div class="fl"><label>Categoría</label>
+    <select id="f-cat" onchange="applyFilters()">
+      <option value="all">Todas</option>
+    </select>
+  </div>
+  <div class="fl"><label>Segmento</label>
+    <select id="f-seg" onchange="applyFilters()">
+      <option value="all">Todos</option>
+    </select>
+  </div>
+  <div class="fl"><label>Descuento</label>
+    <select id="f-desc" onchange="applyFilters()">
+      <option value="all">Todos</option>
+    </select>
+  </div>
+  <button class="filter-reset" onclick="resetFilters()">✕ Limpiar</button>
+  <span class="active-filters" id="filter-status">Cargando...</span>
+</div>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- ══ CEO ══ -->
+<div id="role-ceo" class="role-panel active">
+  <div class="section-nav">
+    <button class="snav active" onclick="switchSection('ceo','overview',this)">Visión global</button>
+    <button class="snav" onclick="switchSection('ceo','financiero',this)">Financiero</button>
+    <button class="snav" onclick="switchSection('ceo','geografico',this)">Geográfico</button>
+    <button class="snav" onclick="switchSection('ceo','alertas',this)">Alertas</button>
+  </div>
+
+  <div id="ceo-overview" class="spanel active">
+    <div class="alert"><div class="adot"></div>
+      <div><strong style="color:var(--red)">Alertas automáticas calculadas sobre tus datos reales:</strong>
+      <span style="color:var(--t2)"> Margen Furniture crítico · Descuentos &gt;30% destruyen valor · Estados con margen negativo</span></div>
+    </div>
+    <div class="krow">
+      <div class="kcard bl tip"><div class="klbl">Ventas totales</div><div class="kval" id="kv-sales">—</div><div class="ksub" id="ks-sales">Cargando...</div><span class="kdelta up" id="kd-sales"></span><div class="tt">Suma total del campo Ventas<br>Actualizado desde tu Google Sheets<br>Se recalcula con cada filtro aplicado</div></div>
+      <div class="kcard tl tip"><div class="klbl">Beneficio neto</div><div class="kval" id="kv-profit">—</div><div class="ksub">Margen: <span id="kv-margin">—</span></div><span class="kdelta up" id="kd-profit"></span><div class="tt">Suma total del campo Beneficio<br>Margen = Beneficio / Ventas<br>Datos en tiempo real de tu hoja</div></div>
+      <div class="kcard am tip"><div class="klbl">Pedidos únicos</div><div class="kval" id="kv-orders">—</div><div class="ksub">Ticket medio: <span id="kv-ticket">—</span></div><span class="kdelta up" id="kd-orders"></span><div class="tt">Count distinct del campo ID_Pedido<br>Ticket = Ventas / Pedidos únicos</div></div>
+      <div class="kcard rd tip"><div class="klbl">Pérdida por dctos &gt;30%</div><div class="kval" id="kv-disc-loss">—</div><div class="ksub" id="ks-disc-loss">Cargando...</div><span class="kdelta dn"></span><div class="tt">Suma de Beneficio donde Tramo_Descuento<br>es '31-50%' o 'Más 50%'<br>Calculado automáticamente de tus datos</div></div>
+      <div class="kcard pu tip"><div class="klbl">Clientes únicos</div><div class="kval" id="kv-customers">—</div><div class="ksub">CLV: <span id="kv-clv">—</span></div><span class="kdelta up"></span><div class="tt">Count distinct del campo ID_Cliente<br>CLV estimado = Ventas / Clientes</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-title">Ventas y beneficio por trimestre <span class="card-note">datos reales de tu hoja</span></div>
+        <div class="cw" style="height:200px"><canvas id="ch-ceo-trend" role="img" aria-label="Ventas y beneficio trimestral"></canvas></div>
+        <div class="leg"><span><span class="ld" style="background:#58a6ff"></span>Ventas</span><span><span class="ld" style="background:#3fb950"></span>Beneficio</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Semáforo estratégico <span class="card-note">calculado en tiempo real</span></div>
+        <div id="semaforo-container" style="display:flex;flex-direction:column;gap:8px">
+          <div style="background:var(--bg3);border-radius:7px;padding:9px 11px;font-size:11px;color:var(--t2)">Cargando alertas...</div>
+        </div>
+        <div style="margin-top:12px" id="cat-margin-bars"></div>
+      </div>
+    </div>
+    <div class="g3">
+      <div class="card">
+        <div class="card-title">Ventas por año</div>
+        <div class="cw" style="height:140px"><canvas id="ch-ceo-yr" role="img" aria-label="Ventas anuales"></canvas></div>
+        <button class="dbtn" onclick="drill('d-ceo-yr')">▼ Drill-down trimestral</button>
+        <div class="dpanel" id="d-ceo-yr"><div class="cw" style="height:110px"><canvas id="ch-ceo-yr2" role="img" aria-label="Ventas trimestrales"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Ventas por región</div>
+        <div class="cw" style="height:140px"><canvas id="ch-ceo-reg" role="img" aria-label="Ventas por región"></canvas></div>
+        <button class="dbtn" onclick="drill('d-ceo-reg')">▼ Drill-down estados</button>
+        <div class="dpanel" id="d-ceo-reg"><div id="states-bars"></div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Segmentos</div>
+        <div class="cw" style="height:140px"><canvas id="ch-ceo-seg" role="img" aria-label="Ventas por segmento"></canvas></div>
+        <button class="dbtn" onclick="drill('d-ceo-seg')">▼ Drill-down margen</button>
+        <div class="dpanel" id="d-ceo-seg"><div id="seg-margin-bars"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ceo-financiero" class="spanel">
+    <div class="g2">
+      <div class="card"><div class="card-title">Evolución anual — ventas y beneficio</div><div class="cw" style="height:200px"><canvas id="ch-fin-yr" role="img" aria-label="Ventas y beneficio anuales"></canvas></div></div>
+      <div class="card"><div class="card-title">Impacto descuentos en beneficio</div><div class="cw" style="height:160px"><canvas id="ch-fin-disc" role="img" aria-label="Beneficio por tramo de descuento"></canvas></div><div style="margin-top:10px;padding:10px;background:rgba(248,81,73,.07);border:1px solid rgba(248,81,73,.2);border-radius:7px;font-size:11px;color:var(--red)" id="disc-insight">Calculando...</div></div>
+    </div>
+    <div class="card"><div class="card-title">Tabla financiera por año</div><div id="fin-table"></div></div>
+  </div>
+
+  <div id="ceo-geografico" class="spanel">
+
+    <!-- MAPA COROPLÉTICO -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="card-title">
+        Mapa coroplético EE.UU. — margen % por estado
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="display:flex;align-items:center;gap:8px;font-size:10px;font-weight:400;color:var(--t2)">
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;background:#f85149;border-radius:2px"></div>Pérdidas</div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;background:#d29922;border-radius:2px"></div>0–5%</div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;background:#8db840;border-radius:2px"></div>5–15%</div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;background:#3fb950;border-radius:2px"></div>&gt;15%</div>
+            <div style="display:flex;align-items:center;gap:3px"><div style="width:12px;height:12px;background:var(--bg3);border:1px solid var(--b1);border-radius:2px"></div>Sin datos</div>
+          </div>
+          <span class="card-note">Pasa el ratón sobre cada estado para ver el detalle</span>
+        </div>
+      </div>
+      <div id="us-map-container" style="position:relative;width:100%;background:var(--bg3);border-radius:8px;overflow:hidden">
+        <svg id="us-map" viewBox="0 0 960 600" style="width:100%;display:block" role="img" aria-label="Mapa coroplético de márgenes por estado en EE.UU.">
+          <title>Mapa de márgenes por estado — Superstore</title>
+        </svg>
+        <div id="map-tooltip" style="display:none;position:absolute;pointer-events:none;background:#0d1117;border:1px solid rgba(110,118,129,0.4);border-radius:8px;padding:10px 14px;font-size:12px;color:#e6edf3;min-width:180px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.6)"></div>
+      </div>
+    </div>
+
+    <!-- REGIONAL + TOP ESTADOS -->
+    <div class="g2e">
+      <div class="card">
+        <div class="card-title">Rendimiento regional</div>
+        <div class="cw" style="height:190px"><canvas id="ch-geo" role="img" aria-label="Ventas y beneficio por región"></canvas></div>
+        <div style="margin-top:10px" id="geo-bars"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Top estados — semáforo</div>
+        <div id="states-table"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ceo-alertas" class="spanel">
+    <div class="g2e">
+      <div class="card"><div class="card-title">Alertas activas</div><div id="alertas-container"></div></div>
+      <div class="card"><div class="card-title">Palancas de mejora</div><div id="palancas-container"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ VENTAS ══ -->
+<div id="role-ventas" class="role-panel">
+  <div class="section-nav">
+    <button class="snav active" onclick="switchSection('ventas','vsales',this)">Ventas</button>
+    <button class="snav" onclick="switchSection('ventas','vseg',this)">Segmentos</button>
+    <button class="snav" onclick="switchSection('ventas','vseasonal',this)">Estacionalidad</button>
+    <button class="snav" onclick="switchSection('ventas','vgeo',this)">Geografía</button>
+    <button class="snav" onclick="switchSection('ventas','vship',this)">Envíos</button>
+  </div>
+  <div id="ventas-vsales" class="spanel active">
+    <div class="krow">
+      <div class="kcard bl tip"><div class="klbl">Ventas totales</div><div class="kval" id="kv-v-sales">—</div><div class="ksub">Acumulado período</div><span class="kdelta up" id="kd-v-sales"></span><div class="tt">Suma campo Ventas con filtros aplicados</div></div>
+      <div class="kcard tl tip"><div class="klbl">Pedidos únicos</div><div class="kval" id="kv-v-orders">—</div><div class="ksub">Count distinct ID_Pedido</div><span class="kdelta up" id="kd-v-orders"></span><div class="tt">Pedidos únicos en el período seleccionado</div></div>
+      <div class="kcard am tip"><div class="klbl">Ticket medio</div><div class="kval" id="kv-v-ticket">—</div><div class="ksub">Ventas / Pedidos</div><span class="kdelta wn"></span><div class="tt">Ticket medio = Ventas totales / Pedidos únicos</div></div>
+      <div class="kcard pu tip"><div class="klbl">Clientes únicos</div><div class="kval" id="kv-v-customers">—</div><div class="ksub">Count distinct ID_Cliente</div><span class="kdelta up"></span><div class="tt">Clientes distintos en el período</div></div>
+      <div class="kcard rd tip"><div class="klbl">Margen</div><div class="kval" id="kv-v-margin">—</div><div class="ksub">Beneficio / Ventas</div><span class="kdelta wn"></span><div class="tt">Margen calculado en tiempo real sobre tus datos</div></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="card-title">Ventas por trimestre y año <span class="card-note">datos reales</span></div><div class="cw" style="height:190px"><canvas id="ch-v-qt" role="img" aria-label="Ventas trimestrales"></canvas></div><div class="leg" id="leg-v-qt"></div></div>
+      <div class="card"><div class="card-title">Ventas por segmento</div><div class="cw" style="height:150px"><canvas id="ch-v-seg" role="img" aria-label="Ventas por segmento"></canvas></div><button class="dbtn" onclick="drill('d-v-seg')">▼ Drill-down margen</button><div class="dpanel" id="d-v-seg"><div id="v-seg-margin"></div></div></div>
+    </div>
+    <div class="card"><div class="card-title">Comparativa anual</div><div class="cw" style="height:160px"><canvas id="ch-v-yr" role="img" aria-label="Ventas y beneficio anuales"></canvas></div><div class="leg"><span><span class="ld" style="background:#58a6ff"></span>Ventas</span><span><span class="ld" style="background:#3fb950"></span>Beneficio</span></div></div>
+  </div>
+  <div id="ventas-vseg" class="spanel">
+    <div id="seg-cards" class="g3"></div>
+    <div class="card"><div class="card-title">Evolución trimestral por segmento</div><div class="cw" style="height:190px"><canvas id="ch-v-segtrd" role="img" aria-label="Ventas por segmento trimestral"></canvas></div><div class="leg"><span><span class="ld" style="background:#58a6ff"></span>Consumer</span><span><span class="ld" style="background:#3fb950"></span>Corporate</span><span><span class="ld" style="background:#bc8cff"></span>Home Office</span></div></div>
+  </div>
+  <div id="ventas-vseasonal" class="spanel">
+    <div id="seasonal-cards" class="g3" style="margin-bottom:14px"></div>
+    <div class="card"><div class="card-title">Ventas mensuales — patrones estacionales <span class="card-note">calculado de tus datos</span></div><div class="cw" style="height:210px"><canvas id="ch-v-monthly" role="img" aria-label="Ventas mensuales por año"></canvas></div><div class="leg" id="leg-monthly"></div></div>
+  </div>
+  <div id="ventas-vgeo" class="spanel">
+    <div class="g2e">
+      <div class="card"><div class="card-title">Ventas y beneficio por región</div><div class="cw" style="height:190px"><canvas id="ch-v-geo" role="img" aria-label="Ventas por región"></canvas></div><button class="dbtn" onclick="drill('d-vv-geo')">▼ Drill-down estados</button><div class="dpanel" id="d-vv-geo"><div id="v-states-detail"></div></div></div>
+      <div class="card"><div class="card-title">Clasificación de estados</div><div id="v-states-table"></div></div>
+    </div>
+  </div>
+  <div id="ventas-vship" class="spanel">
+    <div class="g2e">
+      <div class="card"><div class="card-title">Rendimiento por modo de envío</div><div class="cw" style="height:180px"><canvas id="ch-v-ship" role="img" aria-label="Ventas por modo envío"></canvas></div></div>
+      <div class="card"><div class="card-title">Detalle envíos</div><div id="ship-table"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PRODUCTO ══ -->
+<div id="role-producto" class="role-panel">
+  <div class="section-nav">
+    <button class="snav active" onclick="switchSection('producto','poverview',this)">Visión</button>
+    <button class="snav" onclick="switchSection('producto','pmargins',this)">Márgenes</button>
+    <button class="snav" onclick="switchSection('producto','pdiscounts',this)">Descuentos</button>
+    <button class="snav" onclick="switchSection('producto','pvolumen',this)">Volumen</button>
+    <button class="snav" onclick="switchSection('producto','pacciones',this)">Plan de acción</button>
+  </div>
+  <div id="producto-poverview" class="spanel active">
+    <div class="alert"><div class="adot"></div><div style="color:var(--t2)"><strong style="color:var(--red)">Alertas de producto calculadas en vivo:</strong> Sub-categorías con margen negativo · Descuentos destructivos · Oportunidades de mejora</div></div>
+    <div class="krow">
+      <div class="kcard tl tip"><div class="klbl">Mejor margen (sub-cat.)</div><div class="kval" id="kv-best-sub">—</div><div class="ksub" id="ks-best-sub">Cargando...</div><span class="kdelta up">↑ Potenciar</span><div class="tt">Sub-categoría con mayor Margen_Pct<br>Calculado en tiempo real de tus datos</div></div>
+      <div class="kcard bl tip"><div class="klbl">Mayor volumen</div><div class="kval" id="kv-top-vol">—</div><div class="ksub" id="ks-top-vol">Cargando...</div><span class="kdelta wn">→ Optimizar</span><div class="tt">Sub-categoría con mayores Ventas</div></div>
+      <div class="kcard rd tip"><div class="klbl">Peor margen (sub-cat.)</div><div class="kval" id="kv-worst-sub">—</div><div class="ksub" id="ks-worst-sub">Cargando...</div><span class="kdelta dn">↓ Urgente</span><div class="tt">Sub-categoría con menor Margen_Pct<br>Acción requerida si es negativo</div></div>
+      <div class="kcard am tip"><div class="klbl">Líneas con dcto.</div><div class="kval" id="kv-disc-pct">—</div><div class="ksub" id="ks-disc-pct">Cargando...</div><span class="kdelta dn">↓ Impacto</span><div class="tt">% de líneas con Descuento &gt; 0<br>Calculado sobre datos actuales</div></div>
+      <div class="kcard pu tip"><div class="klbl">Margen global</div><div class="kval" id="kv-p-margin">—</div><div class="ksub">Objetivo &gt;15%</div><span class="kdelta wn">↗</span><div class="tt">Margen total = Beneficio / Ventas<br>Dato en tiempo real</div></div>
+    </div>
+    <div class="g2">
+      <div class="card"><div class="card-title">Margen % por Sub_Categoria <span class="card-note">verde &gt;15% · rojo &lt;0%</span></div><div class="cw" style="height:320px"><canvas id="ch-p-subcat" role="img" aria-label="Margen por sub-categoría"></canvas></div></div>
+      <div class="card"><div class="card-title">Ventas vs. margen por Categoría</div><div class="cw" style="height:160px"><canvas id="ch-p-cat" role="img" aria-label="Ventas y margen por categoría"></canvas></div><button class="dbtn" onclick="drill('d-p-cat')">▼ Drill-down sub-categorías</button><div class="dpanel" id="d-p-cat"><div id="p-subcat-drill"></div></div><div style="margin-top:14px"><div id="p-cat-table"></div></div></div>
+    </div>
+  </div>
+  <div id="producto-pmargins" class="spanel">
+    <div class="g2e">
+      <div class="card"><div class="card-title">Ranking completo de rentabilidad</div><div id="p-margin-table"></div></div>
+      <div class="card"><div class="card-title">Margen por categoría</div><div class="cw" style="height:200px"><canvas id="ch-p-catbar" role="img" aria-label="Margen por categoría"></canvas></div></div>
+    </div>
+  </div>
+  <div id="producto-pdiscounts" class="spanel">
+    <div id="disc-kpi-row" class="g4"></div>
+    <div class="g2">
+      <div class="card"><div class="card-title">Impacto Tramo_Descuento en beneficio</div><div class="cw" style="height:190px"><canvas id="ch-p-disc" role="img" aria-label="Beneficio por tramo descuento"></canvas></div><div style="margin-top:10px;padding:10px;background:rgba(248,81,73,.07);border:1px solid rgba(248,81,73,.2);border-radius:7px;font-size:11px;color:var(--red)" id="disc-conclusion">Calculando...</div></div>
+      <div class="card"><div class="card-title">Tabla por Tramo_Descuento</div><div id="disc-table"></div></div>
+    </div>
+  </div>
+  <div id="producto-pvolumen" class="spanel">
+    <div class="card" style="margin-bottom:12px"><div class="card-title">Volumen por Sub_Categoria <span class="card-note">campo Cantidad</span></div><div class="cw" style="height:190px"><canvas id="ch-p-qty" role="img" aria-label="Unidades por sub-categoría"></canvas></div></div>
+    <div class="g2e">
+      <div class="card"><div class="card-title">Top productos por ventas</div><div id="top-products-table"></div></div>
+      <div class="card"><div class="card-title">Eficiencia por categoría</div><div class="cw" style="height:170px"><canvas id="ch-p-eff" role="img" aria-label="Ventas y beneficio por categoría"></canvas></div><div class="leg"><span><span class="ld" style="background:#58a6ff"></span>Ventas</span><span><span class="ld" style="background:#3fb950"></span>Beneficio</span></div></div>
+    </div>
+  </div>
+  <div id="producto-pacciones" class="spanel">
+    <div class="g2e">
+      <div class="card"><div class="card-title">Plan de acción priorizado <span class="card-note">generado de tus datos</span></div><div id="action-plan"></div></div>
+      <div class="card"><div class="card-title">Matriz decisión — Ventas vs. Margen</div><div class="cw" style="height:240px"><canvas id="ch-p-matrix" role="img" aria-label="Scatter ventas versus margen"></canvas></div><div class="leg"><span><span class="ld" style="background:#3fb950;border-radius:50%"></span>Potenciar</span><span><span class="ld" style="background:#d29922;border-radius:50%"></span>Optimizar</span><span><span class="ld" style="background:#f85149;border-radius:50%"></span>Revisar</span></div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /dashboard -->
+
+<!-- MODALES -->
+<div id="modal-guide" class="modal-overlay" onclick="closeModal(event,this)">
+  <div class="modal">
+    <div class="modal-title">📖 Guía de uso <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')">✕</button></div>
+    <div class="guide-title" style="color:var(--blue)">Cómo funciona la conexión en vivo</div>
+    <div class="guide-item"><span class="guide-icon">1</span><div>El dashboard lee tu Google Sheet directamente al abrirse. No necesitas exportar ni copiar datos manualmente.</div></div>
+    <div class="guide-item"><span class="guide-icon">2</span><div>Cuando actualices datos en tu hoja (nuevas ventas, nuevos pedidos), pulsa <strong>"⟳ Actualizar datos"</strong> en la barra verde de arriba y el dashboard se recalcula en segundos.</div></div>
+    <div class="guide-item"><span class="guide-icon">3</span><div>Todos los KPIs, gráficos, alertas y rankings se calculan automáticamente sobre los datos que hayas cargado. No hay nada hardcodeado.</div></div>
+    <div class="guide-title" style="color:var(--blue);margin-top:14px">Filtros dinámicos</div>
+    <div class="guide-item"><span class="guide-icon">4</span><div>Los filtros de la barra (Período, Trimestre, Región, Categoría, Segmento, Descuento) filtran todos los gráficos y KPIs a la vez.</div></div>
+    <div class="guide-item"><span class="guide-icon">5</span><div>Los desplegables de Año, Región, Categoría y Segmento se rellenan automáticamente con los valores que existan en tus datos.</div></div>
+    <div class="guide-title" style="color:var(--blue);margin-top:14px">Drill-down</div>
+    <div class="guide-item"><span class="guide-icon">6</span><div>En muchos gráficos aparece el botón <strong>"▼ Drill-down"</strong>. Al pulsarlo se despliega el siguiente nivel de detalle calculado sobre tus datos.</div></div>
+    <div class="guide-title" style="color:var(--blue);margin-top:14px">Exportación</div>
+    <div class="guide-item"><span class="guide-icon">7</span><div>El botón verde <strong>"Exportar CSV"</strong> descarga los datos filtrados actuales. El CSV incluye BOM UTF-8 para que los caracteres españoles se vean bien en Excel.</div></div>
+  </div>
+</div>
+
+<div id="modal-insights" class="modal-overlay" onclick="closeModal(event,this)">
+  <div class="modal">
+    <div class="modal-title">💡 Principales insights <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')">✕</button></div>
+    <div id="insights-content"><div style="color:var(--t2);font-size:12px">Carga los datos para ver los insights calculados en tiempo real.</div></div>
+  </div>
+</div>
+
+<div id="modal-mejoras" class="modal-overlay" onclick="closeModal(event,this)">
+  <div class="modal">
+    <div class="modal-title">🚀 Propuestas de mejora futura <button class="modal-close" onclick="this.closest('.modal-overlay').classList.remove('open')">✕</button></div>
+    <div class="insight-card ins-blu"><div class="ins-title">1. Actualización automática programada</div>Añadir un intervalo de refresco automático (cada 5 min, cada hora) para que el dashboard se actualice solo sin que nadie tenga que pulsar el botón.</div>
+    <div class="insight-card ins-blu"><div class="ins-title">2. Alertas por email cuando se cruzan umbrales</div>Detectar automáticamente cuando una categoría baja del 5% de margen o un estado entra en pérdidas y enviar un email de alerta.</div>
+    <div class="insight-card ins-blu"><div class="ins-title">3. Modelo predictivo de ventas</div>Con los patrones estacionales identificados construir una previsión para el próximo trimestre usando los datos históricos de la hoja.</div>
+    <div class="insight-card ins-blu"><div class="ins-title">4. Análisis RFM de clientes</div>Segmentar los 793 clientes en categorías (VIP, en riesgo, nuevos) usando Recencia, Frecuencia y Valor monetario directamente desde la hoja.</div>
+    <div class="insight-card ins-blu"><div class="ins-title">5. Simulador de descuentos</div>Un slider que permita simular el impacto en beneficio de cambiar la política de descuentos antes de implementarla.</div>
+    <div class="insight-card ins-grn" style="opacity:.75"><div class="ins-title">✅ 6. Mapa coroplético de EE.UU. — IMPLEMENTADO</div>Mapa coroplético real integrado en la sección Geográfico del CEO. Colores por margen (rojo = pérdidas, verde = rentable), tooltip interactivo por estado y leyenda visual.</div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════
+//  ESTADO GLOBAL
+// ══════════════════════════════════
+let ALL_DATA = [];
+let FILTERED = [];
+let SHEET_ID = '';
+let SHEET_TAB = '';
+let charts = {};
+
+const C = {bl:'#58a6ff',tl:'#3fb950',am:'#d29922',rd:'#f85149',pu:'#bc8cff',or:'#f0883e'};
+const GC = 'rgba(48,54,61,0.8)';
+const TC = '#8b949e';
+const TOOLTIP = {backgroundColor:'#0d1117',borderColor:'rgba(110,118,129,0.4)',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#8b949e',padding:10};
+const BASE = {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:TOOLTIP},scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10}}}}};
+
+// ══════════════════════════════════
+//  CONEXIÓN A GOOGLE SHEETS
+// ══════════════════════════════════
+function extractSheetId(url){
+  if(!url) return null;
+  url = url.trim();
+  // Si ya es solo el ID (sin /d/)
+  if(!url.includes('/')) return url;
+  const m = url.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+  return m ? m[1] : null;
+}
+
+async function connectSheet(){
+  const urlInput = document.getElementById('sheet-url').value.trim();
+  const tab = document.getElementById('sheet-tab').value.trim() || 'Datos_Procesados';
+
+  const id = extractSheetId(urlInput);
+  if(!id){
+    showSetupError('No se pudo extraer el ID de la hoja. Asegúrate de pegar el enlace completo de Google Sheets.');
+    return;
+  }
+
+  SHEET_ID = id;
+  SHEET_TAB = tab;
+
+  setProgress(true, 'Conectando con Google Sheets...');
+  document.getElementById('connect-btn').disabled = true;
+  document.getElementById('setup-error').style.display = 'none';
+
+  try {
+    await loadSheetData();
+    // Guardar en localStorage para próximas visitas
+    localStorage.setItem('ss_id', SHEET_ID);
+    localStorage.setItem('ss_tab', SHEET_TAB);
+    showDashboard();
+  } catch(e){
+    setProgress(false);
+    document.getElementById('connect-btn').disabled = false;
+    showSetupError('Error al cargar: ' + e.message + '. Asegúrate de que la hoja es pública ("cualquiera con el enlace puede ver").');
+  }
+}
+
+async function loadSheetData(){
+  setStatusLoading(true);
+
+  // URL pública de Google Sheets en formato CSV
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_TAB)}`;
+
+  const resp = await fetch(url);
+  if(!resp.ok) throw new Error(`HTTP ${resp.status} — verifica que la hoja es pública`);
+
+  const text = await resp.text();
+  if(!text || text.trim().length < 10) throw new Error('La hoja parece estar vacía o la pestaña no existe');
+
+  ALL_DATA = parseCSV(text);
+  if(ALL_DATA.length < 2) throw new Error('No se encontraron filas de datos. Verifica el nombre de la pestaña.');
+
+  setStatusLoading(false, ALL_DATA.length);
+  populateFilters();
+  applyFilters();
+}
+
+function parseCSV(text){
+  const lines = text.split('\n');
+  if(lines.length < 2) return [];
+
+  // Parse header — eliminar comillas y BOM
+  const headers = parseCSVLine(lines[0]).map(h => h.replace(/^\uFEFF/, '').trim());
+
+  const rows = [];
+  for(let i=1; i<lines.length; i++){
+    const line = lines[i].trim();
+    if(!line) continue;
+    const vals = parseCSVLine(line);
+    const obj = {};
+    headers.forEach((h,j) => { obj[h] = (vals[j] || '').trim(); });
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function parseCSVLine(line){
+  const result = [];
+  let cur = '';
+  let inQ = false;
+  for(let i=0; i<line.length; i++){
+    const ch = line[i];
+    if(ch==='"'){
+      if(inQ && line[i+1]==='"'){ cur+='"'; i++; }
+      else inQ = !inQ;
+    } else if(ch===',' && !inQ){
+      result.push(cur); cur='';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+// ══════════════════════════════════
+//  FILTROS
+// ══════════════════════════════════
+function populateFilters(){
+  const years = [...new Set(ALL_DATA.map(r=>r.Anio).filter(Boolean))].sort();
+  const regions = [...new Set(ALL_DATA.map(r=>r.Region).filter(Boolean))].sort();
+  const cats = [...new Set(ALL_DATA.map(r=>r.Categoria).filter(Boolean))].sort();
+  const segs = [...new Set(ALL_DATA.map(r=>r.Segmento).filter(Boolean))].sort();
+  const descs = [...new Set(ALL_DATA.map(r=>r.Tramo_Descuento).filter(Boolean))].sort();
+
+  fillSelect('f-anio', years, 'Todos los años');
+  fillSelect('f-region', regions, 'Todas');
+  fillSelect('f-cat', cats, 'Todas');
+  fillSelect('f-seg', segs, 'Todos');
+  fillSelect('f-desc', descs, 'Todos');
+}
+
+function fillSelect(id, vals, allLabel){
+  const sel = document.getElementById(id);
+  if(!sel) return;
+  const cur = sel.value;
+  sel.innerHTML = `<option value="all">${allLabel}</option>`;
+  vals.forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    if(v === cur) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+function getFilters(){
+  return {
+    anio: document.getElementById('f-anio')?.value || 'all',
+    trim: document.getElementById('f-trim')?.value || 'all',
+    region: document.getElementById('f-region')?.value || 'all',
+    cat: document.getElementById('f-cat')?.value || 'all',
+    seg: document.getElementById('f-seg')?.value || 'all',
+    desc: document.getElementById('f-desc')?.value || 'all',
+  };
+}
+
+function applyFilters(){
+  if(!ALL_DATA.length) return;
+  const f = getFilters();
+
+  FILTERED = ALL_DATA.filter(r =>
+    (f.anio==='all' || r.Anio===f.anio) &&
+    (f.trim==='all' || r.Trimestre===f.trim) &&
+    (f.region==='all' || r.Region===f.region) &&
+    (f.cat==='all' || r.Categoria===f.cat) &&
+    (f.seg==='all' || r.Segmento===f.seg) &&
+    (f.desc==='all' || r.Tramo_Descuento===f.desc)
+  );
+
+  const active = [];
+  if(f.anio!=='all') active.push('Año: '+f.anio);
+  if(f.trim!=='all') active.push('Trim: '+f.trim);
+  if(f.region!=='all') active.push('Región: '+f.region);
+  if(f.cat!=='all') active.push('Cat: '+f.cat);
+  if(f.seg!=='all') active.push('Seg: '+f.seg);
+  if(f.desc!=='all') active.push('Dcto: '+f.desc);
+
+  const el = document.getElementById('filter-status');
+  if(el) el.textContent = active.length
+    ? `Filtros: ${active.join(' · ')} · ${FILTERED.length} filas`
+    : `Todos los datos · ${FILTERED.length.toLocaleString('es-ES')} filas`;
+
+  renderAll();
+}
+
+function resetFilters(){
+  ['f-anio','f-trim','f-region','f-cat','f-seg','f-desc'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='all';
+  });
+  applyFilters();
+}
+
+// ══════════════════════════════════
+//  HELPERS DE CÁLCULO
+// ══════════════════════════════════
+function num(v){ return parseFloat(String(v).replace(',','.')) || 0; }
+function fmt(n){ if(Math.abs(n)>=1e6) return (n<0?'−$':'$')+(Math.abs(n)/1e6).toFixed(2)+'M'; if(Math.abs(n)>=1000) return (n<0?'−$':'$')+Math.round(Math.abs(n)/1000)+'K'; return (n<0?'−$':'$')+Math.abs(n).toFixed(0); }
+function pct(n){ return (n*100).toFixed(1)+'%'; }
+
+function groupBy(data, key){
+  const out = {};
+  data.forEach(r => {
+    const k = r[key] || 'Sin datos';
+    if(!out[k]) out[k] = [];
+    out[k].push(r);
+  });
+  return out;
+}
+
+function sumField(data, field){ return data.reduce((a,r)=>a+num(r[field]),0); }
+function distinctCount(data, field){ return new Set(data.map(r=>r[field]).filter(Boolean)).size; }
+
+function mkChart(id, cfg){
+  const el = document.getElementById(id);
+  if(!el) return;
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(el, cfg);
+}
+
+// ══════════════════════════════════
+//  RENDER PRINCIPAL
+// ══════════════════════════════════
+function renderAll(){
+  const d = FILTERED;
+  if(!d.length) return;
+
+  const totalSales = sumField(d,'Ventas');
+  const totalProfit = sumField(d,'Beneficio');
+  const margin = totalSales > 0 ? totalProfit/totalSales : 0;
+  const orders = distinctCount(d,'ID_Pedido');
+  const customers = distinctCount(d,'ID_Cliente');
+  const ticket = orders > 0 ? totalSales/orders : 0;
+  const discLoss = sumField(d.filter(r=>r.Tramo_Descuento==='31-50%'||r.Tramo_Descuento==='Más 50%'),'Beneficio');
+  const discLines = d.filter(r=>r.Descuento&&num(r.Descuento)>0).length;
+
+  // ── CEO KPIs ──
+  setEl('kv-sales', fmt(totalSales));
+  setEl('ks-sales', `${d.length.toLocaleString('es-ES')} líneas · ${orders.toLocaleString('es-ES')} pedidos`);
+  setEl('kv-profit', fmt(totalProfit));
+  setEl('kv-margin', pct(margin));
+  setEl('kv-orders', orders.toLocaleString('es-ES'));
+  setEl('kv-ticket', fmt(ticket));
+  setEl('kv-disc-loss', discLoss < 0 ? '−$'+Math.round(Math.abs(discLoss)/1000)+'K' : '$'+Math.round(discLoss/1000)+'K');
+  setEl('ks-disc-loss', d.filter(r=>r.Tramo_Descuento==='31-50%'||r.Tramo_Descuento==='Más 50%').length+' líneas afectadas');
+  setEl('kv-customers', customers.toLocaleString('es-ES'));
+  setEl('kv-clv', fmt(customers>0?totalSales/customers:0));
+
+  // ── VENTAS KPIs ──
+  setEl('kv-v-sales', fmt(totalSales));
+  setEl('kv-v-orders', orders.toLocaleString('es-ES'));
+  setEl('kv-v-ticket', fmt(ticket));
+  setEl('kv-v-customers', customers.toLocaleString('es-ES'));
+  setEl('kv-v-margin', pct(margin));
+
+  // ── PRODUCTO KPIs ──
+  const bySubcat = groupBy(d,'Sub_Categoria');
+  const subcatStats = Object.entries(bySubcat).map(([k,v])=>{
+    const s=sumField(v,'Ventas'), p=sumField(v,'Beneficio');
+    return {name:k, sales:s, profit:p, margin:s>0?p/s:0};
+  }).sort((a,b)=>b.margin-a.margin);
+
+  if(subcatStats.length){
+    const best=subcatStats[0], worst=subcatStats[subcatStats.length-1], topVol=subcatStats.slice().sort((a,b)=>b.sales-a.sales)[0];
+    setEl('kv-best-sub', pct(best.margin)); setEl('ks-best-sub', best.name+' · '+fmt(best.sales));
+    setEl('kv-worst-sub', pct(worst.margin)); setEl('ks-worst-sub', worst.name+' · '+fmt(worst.sales));
+    setEl('kv-top-vol', fmt(topVol.sales)); setEl('ks-top-vol', topVol.name+' · '+pct(topVol.margin));
+  }
+  setEl('kv-disc-pct', Math.round(discLines/d.length*100)+'%');
+  setEl('ks-disc-pct', discLines.toLocaleString('es-ES')+' de '+d.length.toLocaleString('es-ES')+' líneas');
+  setEl('kv-p-margin', pct(margin));
+
+  renderCEOCharts(d);
+  renderVentasCharts(d);
+  renderProductoCharts(d, subcatStats);
+  renderSemaforo(d);
+  renderInsights(d, totalSales, totalProfit, margin, discLoss);
+}
+
+function setEl(id, val){ const el=document.getElementById(id); if(el) el.textContent=val; }
+
+// ══════════════════════════════════
+//  CEO CHARTS
+// ══════════════════════════════════
+function renderCEOCharts(d){
+  // Trend by year-quarter
+  const years = [...new Set(d.map(r=>r.Anio).filter(Boolean))].sort();
+  const trims = ['T1','T2','T3','T4'];
+  const labels = [];
+  const salesData = [], profitData = [];
+  years.forEach(yr=>{
+    trims.forEach(t=>{
+      const sub = d.filter(r=>r.Anio===yr&&r.Trimestre===t);
+      if(sub.length||years.length<=2){
+        labels.push(yr.slice(2)+' '+t);
+        salesData.push(sumField(sub,'Ventas'));
+        profitData.push(sumField(sub,'Beneficio'));
+      }
+    });
+  });
+
+  mkChart('ch-ceo-trend',{type:'bar',data:{labels,datasets:[
+    {label:'Ventas',data:salesData,backgroundColor:'rgba(88,166,255,.28)',borderColor:C.bl,borderWidth:1,yAxisID:'y'},
+    {label:'Beneficio',data:profitData,type:'line',borderColor:C.tl,tension:.4,fill:false,pointRadius:2,borderWidth:2,yAxisID:'y1'}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:9},maxRotation:45}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'right'}}}});
+
+  // By year
+  const yrLabels=[], yrSales=[];
+  years.forEach(yr=>{ yrLabels.push(yr); yrSales.push(sumField(d.filter(r=>r.Anio===yr),'Ventas')); });
+  const yrColors=['rgba(88,166,255,.4)','rgba(63,185,80,.35)','rgba(210,153,34,.4)','rgba(188,140,255,.45)'];
+  mkChart('ch-ceo-yr',{type:'bar',data:{labels:yrLabels,datasets:[{data:yrSales,backgroundColor:yrSales.map((_,i)=>yrColors[i%yrColors.length]),borderColor:[C.bl,C.tl,C.am,C.pu],borderWidth:1}]},options:{...BASE,plugins:{...BASE.plugins,legend:{display:false}},scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'}}}}});
+
+  // Quarterly drill
+  const qData=years.map((yr,i)=>({label:yr,data:trims.map(t=>sumField(d.filter(r=>r.Anio===yr&&r.Trimestre===t),'Ventas')),borderColor:[C.bl,C.tl,C.am,C.pu][i%4],tension:.3,fill:false,pointRadius:3,borderWidth:2,borderDash:i<2?[4,2]:undefined}));
+  mkChart('ch-ceo-yr2',{type:'line',data:{labels:trims,datasets:qData},options:{...BASE,plugins:{...BASE.plugins,legend:{display:true,labels:{color:TC,boxWidth:8,font:{size:10}}}},scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'}}}}});
+
+  // Region donut
+  const byReg=groupBy(d,'Region');
+  const regNames=Object.keys(byReg), regSales=regNames.map(r=>sumField(byReg[r],'Ventas'));
+  const regColors=['rgba(63,185,80,.7)','rgba(88,166,255,.7)','rgba(210,153,34,.7)','rgba(248,81,73,.65)'];
+  mkChart('ch-ceo-reg',{type:'doughnut',data:{labels:regNames,datasets:[{data:regSales,backgroundColor:regColors,borderColor:'#161b22',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',labels:{color:TC,boxWidth:8,font:{size:10}}},tooltip:TOOLTIP}}});
+
+  // Segment donut
+  const bySeg=groupBy(d,'Segmento');
+  const segNames=Object.keys(bySeg), segSales=segNames.map(s=>sumField(bySeg[s],'Ventas'));
+  mkChart('ch-ceo-seg',{type:'doughnut',data:{labels:segNames,datasets:[{data:segSales,backgroundColor:['rgba(88,166,255,.7)','rgba(63,185,80,.7)','rgba(188,140,255,.7)'],borderColor:'#161b22',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',labels:{color:TC,boxWidth:8,font:{size:10}}},tooltip:TOOLTIP}}});
+
+  // Geo bars
+  mkChart('ch-geo',{type:'bar',data:{labels:regNames,datasets:[
+    {label:'Ventas',data:regSales,backgroundColor:regColors,borderColor:regColors.map(c=>c.replace('.7)','1)').replace('.65)','1)')),borderWidth:1,yAxisID:'y'},
+    {label:'Beneficio',data:regNames.map(r=>sumField(byReg[r],'Beneficio')),type:'line',borderColor:C.pu,tension:.2,fill:false,pointRadius:5,borderWidth:2,yAxisID:'y1'}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'right'}}}});
+
+  // Fin charts
+  mkChart('ch-fin-yr',{type:'bar',data:{labels:yrLabels,datasets:[
+    {label:'Ventas',data:yrSales,backgroundColor:'rgba(88,166,255,.3)',borderColor:C.bl,borderWidth:1,yAxisID:'y'},
+    {label:'Beneficio',data:years.map(yr=>sumField(d.filter(r=>r.Anio===yr),'Beneficio')),type:'line',borderColor:C.tl,tension:.4,fill:false,pointRadius:4,borderWidth:2,yAxisID:'y1'}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'right'}}}});
+
+  // Discount chart
+  const discNames=['Sin descuento','1-10%','11-30%','31-50%','Más 50%'];
+  const discProfit=discNames.map(t=>sumField(d.filter(r=>r.Tramo_Descuento===t),'Beneficio'));
+  const discCount=discNames.map(t=>d.filter(r=>r.Tramo_Descuento===t).length);
+  mkChart('ch-fin-disc',{type:'bar',data:{labels:discNames,datasets:[
+    {label:'Líneas',data:discCount,backgroundColor:'rgba(88,166,255,.2)',borderColor:C.bl,borderWidth:1,yAxisID:'y'},
+    {label:'Beneficio',data:discProfit,type:'line',borderColor:C.am,tension:.2,fill:false,pointRadius:5,borderWidth:2,yAxisID:'y1',pointBackgroundColor:discProfit.map(v=>v<0?C.rd:C.tl)}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:9},maxRotation:30}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10}},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>(v<0?'−$':'$')+Math.round(Math.abs(v)/1000)+'K'},position:'right'}}}});
+
+  const totalDiscLoss = discProfit.slice(3).reduce((a,b)=>a+b,0);
+  setEl('disc-insight', `Eliminar dctos >30% añadiría ${fmt(Math.abs(totalDiscLoss))} al beneficio neto`);
+
+  // States bars drill
+  const byState=groupBy(d,'Estado');
+  const stateStats=Object.entries(byState).map(([k,v])=>({name:k,sales:sumField(v,'Ventas'),profit:sumField(v,'Beneficio')})).sort((a,b)=>b.sales-a.sales).slice(0,5);
+  const maxS=stateStats[0]?.sales||1;
+  document.getElementById('states-bars').innerHTML=stateStats.map(s=>`
+    <div class="pr"><span class="pl" style="${s.profit<0?'color:var(--red)':''}">${s.name}</span>
+    <div class="pb"><div class="pf" style="width:${Math.round(s.sales/maxS*100)}%;background:${s.profit<0?'var(--red)':'var(--blue)'}"></div></div>
+    <span class="pv" style="${s.profit<0?'color:var(--red)':''}">${fmt(s.sales)}</span></div>`).join('');
+
+  // Seg margin drill
+  const segMarginStats=Object.entries(bySeg).map(([k,v])=>{const s=sumField(v,'Ventas'),p=sumField(v,'Beneficio');return{name:k,margin:s>0?p/s:0};}).sort((a,b)=>b.margin-a.margin);
+  document.getElementById('seg-margin-bars').innerHTML=segMarginStats.map(s=>`
+    <div class="pr"><span class="pl">${s.name}</span>
+    <div class="pb"><div class="pf" style="width:${Math.round(Math.max(0,s.margin)*100/0.2)}%;background:${s.margin<0.05?'var(--amber)':'var(--teal)'}"></div></div>
+    <span class="pv" style="${s.margin<0?'color:var(--red)':s.margin>0.15?'color:var(--teal)':''}">${pct(s.margin)}</span></div>`).join('');
+
+  // Cat margin bars
+  const byCat=groupBy(d,'Categoria');
+  const catStats=Object.entries(byCat).map(([k,v])=>{const s=sumField(v,'Ventas'),p=sumField(v,'Beneficio');return{name:k,sales:s,profit:p,margin:s>0?p/s:0};});
+  const maxCatS=Math.max(...catStats.map(c=>c.sales),1);
+  document.getElementById('cat-margin-bars').innerHTML=catStats.sort((a,b)=>b.margin-a.margin).map(c=>`
+    <div class="pr"><span class="pl">${c.name}</span>
+    <div class="pb"><div class="pf" style="width:${Math.round(Math.max(0,c.margin)*100/0.25)}%;background:${c.margin<0?'var(--red)':c.margin>0.15?'var(--teal)':'var(--amber)'}"></div></div>
+    <span class="pv" style="${c.margin<0?'color:var(--red)':c.margin>0.15?'color:var(--teal)':''}">${pct(c.margin)}</span></div>`).join('');
+
+  // Fin table
+  document.getElementById('fin-table').innerHTML=`<table><thead><tr><th>Año</th><th>Ventas</th><th>Beneficio</th><th>Margen</th><th>Pedidos</th></tr></thead><tbody>${years.map(yr=>{const sub=d.filter(r=>r.Anio===yr);const s=sumField(sub,'Ventas'),p=sumField(sub,'Beneficio'),m=s>0?p/s:0;const ords=distinctCount(sub,'ID_Pedido');return`<tr><td><strong>${yr}</strong></td><td>${fmt(s)}</td><td>${fmt(p)}</td><td><span class="pill ${m>0.15?'pok':m>0.05?'pwn':'pbd'}">${pct(m)}</span></td><td>${ords.toLocaleString('es-ES')}</td></tr>`}).join('')}</tbody></table>`;
+
+  // States table
+  const stateAll=Object.entries(byState).map(([k,v])=>{const s=sumField(v,'Ventas'),p=sumField(v,'Beneficio');return{name:k,sales:s,profit:p,margin:s>0?p/s:0};}).sort((a,b)=>b.sales-a.sales).slice(0,10);
+  document.getElementById('states-table').innerHTML=`<table><thead><tr><th>Estado</th><th>Ventas</th><th>Margen</th><th>Señal</th></tr></thead><tbody>${stateAll.map(s=>`<tr><td style="${s.margin<0?'color:var(--red)':''}">${s.name}</td><td>${fmt(s.sales)}</td><td style="${s.margin<0?'color:var(--red)':s.margin>0.15?'color:var(--teal)':''}">${pct(s.margin)}</td><td><span class="pill ${s.margin>0.05?'pok':s.margin>0?'pwn':'pbd'}">${s.margin>0.05?'OK':s.margin>0?'Atención':'Crítico'}</span></td></tr>`).join('')}</tbody></table>`;
+  document.getElementById('v-states-table').innerHTML=document.getElementById('states-table').innerHTML;
+
+  // MAPA COROPLÉTICO
+  const stateMapData = {};
+  Object.entries(byState).forEach(([name,v]) => {
+    stateMapData[name] = {sales:sumField(v,'Ventas'), profit:sumField(v,'Beneficio')};
+  });
+  renderUSMap(stateMapData);
+
+  // Alertas
+  const catAlerts=catStats.filter(c=>c.margin<0.05);
+  const stateAlerts=stateAll.filter(s=>s.margin<0);
+  document.getElementById('alertas-container').innerHTML=[
+    ...catStats.filter(c=>c.margin<0).map(c=>`<div style="background:rgba(248,81,73,.09);border:1px solid rgba(248,81,73,.25);border-radius:8px;padding:11px 13px;margin-bottom:8px"><div style="font-weight:600;color:var(--red);font-size:12px;margin-bottom:3px">🔴 ${c.name} — PÉRDIDA NETA</div><div style="font-size:11px;color:var(--t2)">Margen: <strong style="color:var(--red)">${pct(c.margin)}</strong> · Beneficio: <strong style="color:var(--red)">${fmt(c.profit)}</strong></div></div>`),
+    `<div style="background:rgba(248,81,73,.09);border:1px solid rgba(248,81,73,.25);border-radius:8px;padding:11px 13px;margin-bottom:8px"><div style="font-weight:600;color:var(--red);font-size:12px;margin-bottom:3px">🔴 Descuentos destructivos</div><div style="font-size:11px;color:var(--t2)">Pérdida por dctos &gt;30%: <strong style="color:var(--red)">${fmt(totalDiscLoss)}</strong></div></div>`,
+    ...stateAlerts.slice(0,3).map(s=>`<div style="background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.2);border-radius:8px;padding:11px 13px;margin-bottom:8px"><div style="font-weight:600;color:var(--amber);font-size:12px;margin-bottom:3px">🟠 ${s.name} — Margen negativo</div><div style="font-size:11px;color:var(--t2)">Margen: <strong style="color:var(--red)">${pct(s.margin)}</strong> · Ventas: ${fmt(s.sales)}</div></div>`)
+  ].join('');
+
+  // Palancas
+  document.getElementById('palancas-container').innerHTML=`<table><thead><tr><th>Acción</th><th>Impacto est.</th><th>Prioridad</th></tr></thead><tbody>
+    <tr><td>Eliminar dctos >30%</td><td style="color:var(--teal);font-weight:600">${fmt(Math.abs(totalDiscLoss))}</td><td style="color:var(--red);font-weight:700">P1</td></tr>
+    ${catStats.filter(c=>c.margin<0).map(c=>`<tr><td>Repricing ${c.name}</td><td style="color:var(--teal);font-weight:600">${fmt(Math.abs(c.profit))}</td><td style="color:var(--red);font-weight:700">P2</td></tr>`).join('')}
+    <tr><td colspan="3" style="padding:10px;background:rgba(63,185,80,.07);border-radius:6px;color:var(--teal);font-weight:600">Potencial total: ${fmt(Math.abs(totalDiscLoss)+catStats.filter(c=>c.margin<0).reduce((a,c)=>a+Math.abs(c.profit),0))}</td></tr>
+  </tbody></table>`;
+}
+
+// ══════════════════════════════════
+//  VENTAS CHARTS
+// ══════════════════════════════════
+function renderVentasCharts(d){
+  const years=[...new Set(d.map(r=>r.Anio).filter(Boolean))].sort();
+  const trims=['T1','T2','T3','T4'];
+  const byReg=groupBy(d,'Region');
+  const bySeg=groupBy(d,'Segmento');
+
+  // Quarterly lines
+  const palette=[C.bl,C.tl,C.am,C.pu];
+  const qDatasets=years.map((yr,i)=>({label:yr,data:trims.map(t=>sumField(d.filter(r=>r.Anio===yr&&r.Trimestre===t),'Ventas')),borderColor:palette[i%4],tension:.3,fill:false,pointRadius:4,borderWidth:2,borderDash:i<2?[5,3]:undefined}));
+  mkChart('ch-v-qt',{type:'line',data:{labels:trims,datasets:qDatasets},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'}}}}});
+  document.getElementById('leg-v-qt').innerHTML=years.map((yr,i)=>`<span><span class="ld" style="background:${palette[i%4]}"></span>${yr}</span>`).join('');
+
+  // Seg donut
+  const segNames=Object.keys(bySeg), segSales=segNames.map(s=>sumField(bySeg[s],'Ventas'));
+  const totalSegSales=segSales.reduce((a,b)=>a+b,0);
+  mkChart('ch-v-seg',{type:'doughnut',data:{labels:segNames.map((s,i)=>s+' '+Math.round(segSales[i]/totalSegSales*100)+'%'),datasets:[{data:segSales,backgroundColor:['rgba(88,166,255,.72)','rgba(63,185,80,.72)','rgba(188,140,255,.72)'],borderColor:'#161b22',borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'right',labels:{color:TC,boxWidth:8,font:{size:10}}},tooltip:TOOLTIP}}});
+
+  // Seg margin drill
+  const segMargin=Object.entries(bySeg).map(([k,v])=>{const s=sumField(v,'Ventas'),p=sumField(v,'Beneficio');return{name:k,margin:s>0?p/s:0};}).sort((a,b)=>b.margin-a.margin);
+  document.getElementById('v-seg-margin').innerHTML=segMargin.map(s=>`<div class="pr"><span class="pl">${s.name}</span><div class="pb"><div class="pf" style="width:${Math.round(Math.max(0,s.margin)*100/0.2)}%;background:${s.margin>0.12?'var(--teal)':'var(--amber)'}"></div></div><span class="pv" style="color:${s.margin>0.12?'var(--teal)':'var(--amber)'}">${pct(s.margin)}</span></div>`).join('');
+
+  // Yr comparison
+  const yrS=years.map(yr=>sumField(d.filter(r=>r.Anio===yr),'Ventas'));
+  const yrP=years.map(yr=>sumField(d.filter(r=>r.Anio===yr),'Beneficio'));
+  mkChart('ch-v-yr',{type:'bar',data:{labels:years,datasets:[
+    {label:'Ventas',data:yrS,backgroundColor:'rgba(88,166,255,.3)',borderColor:C.bl,borderWidth:1,yAxisID:'y'},
+    {label:'Beneficio',data:yrP,type:'line',borderColor:C.tl,tension:.4,fill:false,pointRadius:4,borderWidth:2,yAxisID:'y1'}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'right'}}}});
+
+  // Seg cards
+  document.getElementById('seg-cards').innerHTML=Object.entries(bySeg).map(([seg,v],i)=>{
+    const s=sumField(v,'Ventas'),p=sumField(v,'Beneficio'),m=s>0?p/s:0,o=distinctCount(v,'ID_Pedido');
+    const colArr=[C.bl,C.tl,C.pu];
+    return`<div class="card" style="border-top:2px solid ${colArr[i%3]}"><div class="card-title">${seg}</div><div style="font-size:20px;font-weight:700;color:${colArr[i%3]};margin-bottom:4px">${fmt(s)}</div><div style="font-size:10px;color:var(--t2);margin-bottom:10px">Margen ${pct(m)}</div><div class="pr"><span class="pl">Ventas</span><div class="pb"><div class="pf" style="width:100%;background:${colArr[i%3]}"></div></div><span class="pv">${fmt(s)}</span></div><div class="pr"><span class="pl">Beneficio</span><div class="pb"><div class="pf" style="width:${Math.round(p/s*100*3)}%;background:var(--teal)"></div></div><span class="pv">${fmt(p)}</span></div><div class="pr"><span class="pl">Pedidos</span><div class="pb"><div class="pf" style="width:60%;background:${colArr[i%3]}"></div></div><span class="pv">${o.toLocaleString('es-ES')}</span></div></div>`;
+  }).join('');
+
+  // Seg trend
+  const segTrendData=Object.entries(bySeg).map(([seg,_],idx)=>({
+    label:seg,
+    data:years.flatMap(yr=>trims.map(t=>sumField(d.filter(r=>r.Segmento===seg&&r.Anio===yr&&r.Trimestre===t),'Ventas'))),
+    borderColor:[C.bl,C.tl,C.pu][idx%3],tension:.4,fill:false,pointRadius:2,borderWidth:2
+  }));
+  const segTrendLabels=years.flatMap(yr=>trims.map(t=>yr.slice(2)+' '+t));
+  mkChart('ch-v-segtrd',{type:'line',data:{labels:segTrendLabels,datasets:segTrendData},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:9},maxRotation:45}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'}}}}});
+
+  // Monthly
+  const meses=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const monthlyDatasets=years.map((yr,i)=>({
+    label:yr,
+    data:Array.from({length:12},(_,m)=>sumField(d.filter(r=>r.Anio===yr&&parseInt(r.Num_Mes)===m+1),'Ventas')),
+    borderColor:palette[i%4],tension:.4,fill:false,pointRadius:2,borderWidth:2,borderDash:i<2?[5,3]:undefined
+  }));
+  mkChart('ch-v-monthly',{type:'line',data:{labels:meses,datasets:monthlyDatasets},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'}}}}});
+  document.getElementById('leg-monthly').innerHTML=years.map((yr,i)=>`<span><span class="ld" style="background:${palette[i%4]}"></span>${yr}</span>`).join('');
+
+  // Seasonal cards
+  const q1avg=sumField(d.filter(r=>r.Trimestre==='T1'),'Ventas')/(d.filter(r=>r.Trimestre==='T1').length/d.length*12||1);
+  const allMonthly=Array.from({length:12},(_,m)=>sumField(d.filter(r=>parseInt(r.Num_Mes)===m+1),'Ventas')/years.length);
+  const s1=allMonthly.slice(0,2).reduce((a,b)=>a+b,0)/2;
+  const s2=allMonthly.slice(2,8).reduce((a,b)=>a+b,0)/6;
+  const s3=allMonthly.slice(8,12).reduce((a,b)=>a+b,0)/4;
+  document.getElementById('seasonal-cards').innerHTML=`
+    <div style="background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);border-radius:10px;padding:14px"><div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--blue);margin-bottom:4px;text-transform:uppercase">S1 — Arranque lento · Ene–Feb</div><div style="font-size:20px;font-weight:700;color:var(--blue);margin:6px 0">${fmt(s1)}/mes</div><div style="font-size:11px;color:var(--t2)">T1 el más débil · oportunidad de crecimiento</div></div>
+    <div style="background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.2);border-radius:10px;padding:14px"><div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--amber);margin-bottom:4px;text-transform:uppercase">S2 — Actividad media · Mar–Ago</div><div style="font-size:20px;font-weight:700;color:var(--amber);margin:6px 0">${fmt(s2)}/mes</div><div style="font-size:11px;color:var(--t2)">Actividad estable · pico en Marzo</div></div>
+    <div style="background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);border-radius:10px;padding:14px"><div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--teal);margin-bottom:4px;text-transform:uppercase">S3 — Pico otoñal ⭐ · Sep–Dic</div><div style="font-size:20px;font-weight:700;color:var(--teal);margin:6px 0">${fmt(s3)}/mes</div><div style="font-size:11px;color:var(--t2)">Motor del negocio · ratio S3/S1 = ${(s3/Math.max(s1,1)).toFixed(1)}×</div></div>`;
+
+  // Geo
+  const regNames=Object.keys(byReg);
+  const regS=regNames.map(r=>sumField(byReg[r],'Ventas'));
+  const regP=regNames.map(r=>sumField(byReg[r],'Beneficio'));
+  const regC=['rgba(63,185,80,.4)','rgba(88,166,255,.4)','rgba(210,153,34,.4)','rgba(248,81,73,.4)'];
+  mkChart('ch-v-geo',{type:'bar',data:{labels:regNames,datasets:[
+    {label:'Ventas',data:regS,backgroundColor:regC,borderColor:[C.tl,C.bl,C.am,C.rd],borderWidth:1,yAxisID:'y'},
+    {label:'Beneficio',data:regP,type:'line',borderColor:C.pu,tension:.2,fill:false,pointRadius:5,borderWidth:2,yAxisID:'y1'}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'right'}}}});
+
+  const regDetail=regNames.map((r,i)=>({name:r,sales:regS[i],profit:regP[i],margin:regS[i]>0?regP[i]/regS[i]:0})).sort((a,b)=>b.sales-a.sales);
+  document.getElementById('v-states-detail').innerHTML=regDetail.map(r=>`<div style="font-size:11px;color:var(--t2);margin-bottom:4px"><strong>${r.name}:</strong> ${fmt(r.sales)} · Margen: <span style="${r.margin<0?'color:var(--red)':''}">${pct(r.margin)}</span></div>`).join('');
+
+  // Ship
+  const byShip=groupBy(d,'Modo_Envio');
+  const shipNames=Object.keys(byShip);
+  const shipS=shipNames.map(s=>sumField(byShip[s],'Ventas'));
+  const shipM=shipNames.map(s=>{const v=byShip[s],sv=sumField(v,'Ventas');return sv>0?sumField(v,'Beneficio')/sv:0;});
+  mkChart('ch-v-ship',{type:'bar',data:{labels:shipNames,datasets:[
+    {label:'Ventas',data:shipS,backgroundColor:['rgba(88,166,255,.38)','rgba(63,185,80,.38)','rgba(210,153,34,.38)','rgba(188,140,255,.38)'],borderColor:[C.bl,C.tl,C.am,C.pu],borderWidth:1,yAxisID:'y'},
+    {label:'Margen %',data:shipM.map(m=>m*100),type:'line',borderColor:C.or,tension:.2,fill:false,pointRadius:5,borderWidth:2,yAxisID:'y1',pointBackgroundColor:shipM.map(m=>m>0.13?C.tl:C.am)}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>v.toFixed(1)+'%'},position:'right',min:8,max:20}}}});
+
+  document.getElementById('ship-table').innerHTML=`<table><thead><tr><th>Modo envío</th><th>Pedidos</th><th>Ventas</th><th>Margen</th></tr></thead><tbody>${shipNames.map((s,i)=>`<tr><td>${s}</td><td>${distinctCount(byShip[s],'ID_Pedido').toLocaleString('es-ES')}</td><td>${fmt(shipS[i])}</td><td><span class="pill ${shipM[i]>0.13?'pok':'pwn'}">${pct(shipM[i])}</span></td></tr>`).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════
+//  PRODUCTO CHARTS
+// ══════════════════════════════════
+function renderProductoCharts(d, subcatStats){
+  // Subcat margin bar
+  const scNames=subcatStats.map(s=>s.name);
+  const scMargins=subcatStats.map(s=>parseFloat((s.margin*100).toFixed(1)));
+  mkChart('ch-p-subcat',{type:'bar',data:{labels:scNames,datasets:[{label:'Margen%',data:scMargins,backgroundColor:scMargins.map(m=>m<0?'rgba(248,81,73,.65)':m>15?'rgba(63,185,80,.6)':'rgba(210,153,34,.5)'),borderColor:scMargins.map(m=>m<0?C.rd:m>15?C.tl:C.am),borderWidth:1}]},options:{...BASE,indexAxis:'y',scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>v+'%'}},y:{grid:{color:GC},ticks:{color:TC,font:{size:9}}}}}});
+
+  // Cat chart
+  const byCat=groupBy(d,'Categoria');
+  const catNames=Object.keys(byCat);
+  const catS=catNames.map(c=>sumField(byCat[c],'Ventas'));
+  const catM=catNames.map(c=>{const v=byCat[c],s=sumField(v,'Ventas');return s>0?sumField(v,'Beneficio')/s:0;});
+  mkChart('ch-p-cat',{type:'bar',data:{labels:catNames,datasets:[
+    {label:'Ventas',data:catS,backgroundColor:catM.map(m=>m<0.05?'rgba(248,81,73,.42)':m>0.15?'rgba(63,185,80,.42)':'rgba(88,166,255,.42)'),borderColor:catM.map(m=>m<0.05?C.rd:m>0.15?C.tl:C.bl),borderWidth:1,yAxisID:'y'},
+    {label:'Margen%',data:catM.map(m=>m*100),type:'line',borderColor:C.pu,tension:.2,fill:false,pointRadius:5,borderWidth:2,yAxisID:'y1',pointBackgroundColor:catM.map(m=>m<0.05?C.rd:C.tl)}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>v.toFixed(0)+'%'},position:'right',min:0,max:Math.max(25,...catM.map(m=>m*100))+5}}}});
+
+  // Cat drill
+  document.getElementById('p-subcat-drill').innerHTML=subcatStats.filter(s=>catNames.some(c=>d.filter(r=>r.Sub_Categoria===s.name&&r.Categoria==='Technology').length>0)).slice(0,5).map(s=>`<div class="pr"><span class="pl">${s.name}</span><div class="pb"><div class="pf" style="width:${Math.round(Math.max(0,s.margin)*100/0.5)}%;background:${s.margin<0?'var(--red)':s.margin>0.15?'var(--teal)':'var(--amber)'}"></div></div><span class="pv" style="${s.margin<0?'color:var(--red)':s.margin>0.15?'color:var(--teal)':''}">${pct(s.margin)}</span></div>`).join('');
+
+  // Cat table
+  document.getElementById('p-cat-table').innerHTML=`<table><thead><tr><th>Categoría</th><th>Ventas</th><th>Margen</th><th>Benef.</th></tr></thead><tbody>${catNames.map((c,i)=>`<tr><td${catM[i]<0.05?` style="color:var(--red)"`:''}>${c}</td><td>${fmt(catS[i])}</td><td><span class="pill ${catM[i]>0.1?'pok':catM[i]>0.05?'pwn':'pbd'}">${pct(catM[i])}</span></td><td>${fmt(sumField(byCat[c],'Beneficio'))}</td></tr>`).join('')}</tbody></table>`;
+
+  // Margin full table
+  document.getElementById('p-margin-table').innerHTML=`<table><thead><tr><th>Sub_Categoria</th><th>Ventas</th><th>Beneficio</th><th>Margen</th></tr></thead><tbody>${subcatStats.map(s=>`<tr><td${s.margin<0?` style="color:var(--red);font-weight:600"`:''} >${s.name}</td><td>${fmt(s.sales)}</td><td style="${s.profit<0?'color:var(--red)':'color:var(--teal)'}">${fmt(s.profit)}</td><td><span class="pill ${s.margin>0.1?'pok':s.margin>0?'pwn':'pbd'}">${pct(s.margin)}</span></td></tr>`).join('')}</tbody></table>`;
+
+  // Cat margin bars chart
+  mkChart('ch-p-catbar',{type:'bar',data:{labels:catNames,datasets:[{label:'Margen%',data:catM.map(m=>parseFloat((m*100).toFixed(1))),backgroundColor:catM.map(m=>m<0?'rgba(248,81,73,.6)':m>0.1?'rgba(63,185,80,.55)':'rgba(210,153,34,.5)'),borderColor:catM.map(m=>m<0?C.rd:m>0.1?C.tl:C.am),borderWidth:1}]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>v+'%'}}}}});
+
+  // Discount
+  const discNames=['Sin descuento','1-10%','11-30%','31-50%','Más 50%'];
+  const discData=discNames.map(t=>({count:d.filter(r=>r.Tramo_Descuento===t).length,profit:sumField(d.filter(r=>r.Tramo_Descuento===t),'Beneficio')}));
+  const discLossTotal=discData.slice(3).reduce((a,b)=>a+b.profit,0);
+  document.getElementById('disc-kpi-row').innerHTML=discNames.map((n,i)=>`<div class="kcard ${i<2?'tl':i===2?'am':'rd'}"><div class="klbl">${n}</div><div class="kval">${discData[i].count.toLocaleString('es-ES')}</div><div class="ksub">${Math.round(discData[i].count/d.length*100)}% líneas</div><span class="kdelta ${discData[i].profit>=0?'up':'dn'}">${discData[i].profit>=0?'+':''}${fmt(discData[i].profit)}</span></div>`).join('');
+  mkChart('ch-p-disc',{type:'bar',data:{labels:discNames,datasets:[
+    {label:'Líneas',data:discData.map(d=>d.count),backgroundColor:'rgba(88,166,255,.2)',borderColor:C.bl,borderWidth:1,yAxisID:'y'},
+    {label:'Beneficio',data:discData.map(d=>d.profit),type:'line',borderColor:C.am,tension:.2,fill:false,pointRadius:5,borderWidth:2,yAxisID:'y1',pointBackgroundColor:discData.map(d=>d.profit<0?C.rd:C.tl)}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:9},maxRotation:30}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10}},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>(v<0?'−$':'$')+Math.round(Math.abs(v)/1000)+'K'},position:'right'}}}});
+  document.getElementById('disc-conclusion').textContent=`Eliminar Tramos 31–50% y Más 50% añadiría ${fmt(Math.abs(discLossTotal))} al beneficio neto`;
+  document.getElementById('disc-table').innerHTML=`<table><thead><tr><th>Tramo</th><th>Líneas</th><th>%</th><th>Beneficio</th><th>Señal</th></tr></thead><tbody>${discNames.map((n,i)=>`<tr><td${discData[i].profit<0?` style="color:var(--red);font-weight:600"`:''} >${n}</td><td>${discData[i].count.toLocaleString('es-ES')}</td><td>${Math.round(discData[i].count/d.length*100)}%</td><td style="${discData[i].profit<0?'color:var(--red);font-weight:600':'color:var(--teal);font-weight:600'}">${discData[i].profit>=0?'+':''}${fmt(discData[i].profit)}</td><td><span class="pill ${discData[i].profit>50000?'pok':discData[i].profit>0?'pwn':'pbd'}">${discData[i].profit>50000?'Óptimo':discData[i].profit>0?'Aceptable':'Pérdida'}</span></td></tr>`).join('')}</tbody></table>`;
+
+  // Qty chart
+  const qtyStats=subcatStats.map(s=>({name:s.name,qty:sumField(d.filter(r=>r.Sub_Categoria===s.name),'Cantidad'),margin:s.margin}));
+  mkChart('ch-p-qty',{type:'bar',data:{labels:qtyStats.map(s=>s.name),datasets:[{label:'Uds.',data:qtyStats.map(s=>s.qty),backgroundColor:qtyStats.map(s=>s.margin<0?'rgba(248,81,73,.55)':s.margin>0.15?'rgba(63,185,80,.55)':'rgba(88,166,255,.42)'),borderColor:qtyStats.map(s=>s.margin<0?C.rd:s.margin>0.15?C.tl:C.bl),borderWidth:1}]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:9},maxRotation:45}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10}}}}}});
+
+  // Eff chart
+  mkChart('ch-p-eff',{type:'bar',data:{labels:catNames,datasets:[
+    {label:'Ventas',data:catS,backgroundColor:catM.map(m=>m<0.05?'rgba(248,81,73,.42)':m>0.1?'rgba(63,185,80,.42)':'rgba(88,166,255,.42)'),borderColor:catM.map(m=>m<0.05?C.rd:m>0.1?C.tl:C.bl),borderWidth:1,yAxisID:'y'},
+    {label:'Beneficio',data:catNames.map(c=>sumField(byCat[c],'Beneficio')),type:'line',borderColor:C.pu,tension:.2,fill:false,pointRadius:5,borderWidth:2,yAxisID:'y1'}
+  ]},options:{...BASE,scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'left'},y1:{grid:{display:false},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},position:'right'}}}});
+
+  // Top products
+  const byProd=groupBy(d,'Nombre_Producto');
+  const prodStats=Object.entries(byProd).map(([k,v])=>{const s=sumField(v,'Ventas'),p=sumField(v,'Beneficio');return{name:k,sales:s,profit:p,margin:s>0?p/s:0};}).sort((a,b)=>b.sales-a.sales).slice(0,7);
+  document.getElementById('top-products-table').innerHTML=`<table><thead><tr><th>Producto</th><th>Ventas</th><th>Margen</th></tr></thead><tbody>${prodStats.map(p=>`<tr><td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${p.name}">${p.name.slice(0,40)}${p.name.length>40?'...':''}</td><td>${fmt(p.sales)}</td><td><span class="pill ${p.margin>0.1?'pok':p.margin>0?'pwn':'pbd'}">${pct(p.margin)}</span></td></tr>`).join('')}</tbody></table>`;
+
+  // Matrix scatter
+  const matrixDs=subcatStats.map(s=>({label:s.name,data:[{x:parseFloat((s.margin*100).toFixed(1)),y:s.sales}],backgroundColor:s.margin<0?'rgba(248,81,73,.75)':s.margin>0.15?'rgba(63,185,80,.75)':'rgba(210,153,34,.72)',pointRadius:Math.max(7,Math.min(18,Math.round(s.sales/20000))),pointHoverRadius:Math.max(9,Math.min(20,Math.round(s.sales/20000)+2))}));
+  mkChart('ch-p-matrix',{type:'scatter',data:{datasets:matrixDs},options:{...BASE,plugins:{...BASE.plugins,legend:{display:false},tooltip:{...TOOLTIP,callbacks:{label:(ctx)=>`${ctx.dataset.label}: ${ctx.parsed.x.toFixed(1)}% margen · ${fmt(ctx.parsed.y)} ventas`}}},scales:{x:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>v+'%'},title:{display:true,text:'Margen %',color:TC,font:{size:10}}},y:{grid:{color:GC},ticks:{color:TC,font:{size:10},callback:v=>'$'+Math.round(v/1000)+'K'},title:{display:true,text:'Ventas',color:TC,font:{size:10}}}},layout:{padding:20}}});
+
+  // Action plan
+  const topBad=subcatStats.filter(s=>s.margin<0).slice(0,3);
+  const topGood=subcatStats.filter(s=>s.margin>0.3).slice(0,2);
+  document.getElementById('action-plan').innerHTML=[
+    `<div class="insight-card ins-red"><div class="ins-title">P1 — Eliminar Tramo_Descuento 31–50% y Más 50%</div>Impacto: <strong>${fmt(Math.abs(discLossTotal))}</strong> de beneficio adicional. Es la palanca más rápida y sin inversión.</div>`,
+    ...topBad.map((s,i)=>`<div class="insight-card ins-red"><div class="ins-title">P${i+2} — Repricing ${s.name} (${pct(s.margin)})</div>Pérdida actual: <strong>${fmt(s.profit)}</strong> con ventas de ${fmt(s.sales)}. Revisar precio o discontinuar.</div>`),
+    ...topGood.map(s=>`<div class="insight-card ins-grn"><div class="ins-title">Potenciar ${s.name} (${pct(s.margin)})</div>Mayor margen del catálogo. Ampliar mix e inversión comercial en esta línea.</div>`),
+  ].join('');
+}
+
+// ══════════════════════════════════
+//  SEMÁFORO Y INSIGHTS
+// ══════════════════════════════════
+function renderSemaforo(d){
+  const byCat=groupBy(d,'Categoria');
+  const catStats=Object.entries(byCat).map(([k,v])=>{const s=sumField(v,'Ventas'),p=sumField(v,'Beneficio');return{name:k,margin:s>0?p/s:0};});
+  const criticos=catStats.filter(c=>c.margin<0.05);
+  const ok=catStats.filter(c=>c.margin>=0.15);
+  const warn=catStats.filter(c=>c.margin>=0.05&&c.margin<0.15);
+
+  document.getElementById('semaforo-container').innerHTML=[
+    criticos.length?`<div style="background:rgba(248,81,73,.09);border:1px solid rgba(248,81,73,.22);border-radius:7px;padding:9px 11px"><div style="font-weight:600;color:var(--red);font-size:12px;margin-bottom:3px">🔴 Crítico</div><div style="font-size:11px;color:#cca0a0">${criticos.map(c=>c.name+' '+pct(c.margin)).join(' · ')}</div></div>`:'',
+    warn.length?`<div style="background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.22);border-radius:7px;padding:9px 11px"><div style="font-weight:600;color:var(--amber);font-size:12px;margin-bottom:3px">🟡 Atención</div><div style="font-size:11px;color:#c4a840">${warn.map(c=>c.name+' '+pct(c.margin)).join(' · ')}</div></div>`:'',
+    ok.length?`<div style="background:rgba(63,185,80,.08);border:1px solid rgba(63,185,80,.2);border-radius:7px;padding:9px 11px"><div style="font-weight:600;color:var(--teal);font-size:12px;margin-bottom:3px">🟢 OK</div><div style="font-size:11px;color:#80c890">${ok.map(c=>c.name+' '+pct(c.margin)).join(' · ')}</div></div>`:'',
+  ].filter(Boolean).join('');
+}
+
+function renderInsights(d, totalSales, totalProfit, margin, discLoss){
+  const years=[...new Set(d.map(r=>r.Anio).filter(Boolean))].sort();
+  const byCat=groupBy(d,'Categoria');
+  const bySubcat=groupBy(d,'Sub_Categoria');
+  const subcatStats=Object.entries(bySubcat).map(([k,v])=>{const s=sumField(v,'Ventas'),p=sumField(v,'Beneficio');return{name:k,sales:s,profit:p,margin:s>0?p/s:0};});
+  const worstSub=subcatStats.sort((a,b)=>a.margin-b.margin)[0];
+  const bestSub=subcatStats.sort((a,b)=>b.margin-a.margin)[0];
+  const discPct=Math.round(d.filter(r=>parseFloat(r.Descuento)>0.3).length/d.length*100);
+
+  document.getElementById('insights-content').innerHTML=[
+    `<div class="insight-card ins-red"><div class="ins-title">🔴 Los descuentos &gt;30% destruyen ${Math.round(Math.abs(discLoss)/totalProfit*100)}% del beneficio</div>${discPct}% de las líneas tienen descuentos destructivos, generando una pérdida de <strong>${fmt(discLoss)}</strong>. Sin ellos el beneficio sería <strong>${fmt(totalProfit+Math.abs(discLoss))}</strong>.</div>`,
+    worstSub&&worstSub.margin<0?`<div class="insight-card ins-red"><div class="ins-title">🔴 ${worstSub.name} es la sub-categoría más urgente</div>Margen de <strong style="color:var(--red)">${pct(worstSub.margin)}</strong> con ventas de ${fmt(worstSub.sales)}. Vende mucho pero pierde dinero en cada transacción.</div>`:'',
+    `<div class="insight-card ins-grn"><div class="ins-title">🟢 ${bestSub?.name} tiene el mayor margen del catálogo</div>Margen de <strong style="color:var(--teal)">${pct(bestSub?.margin||0)}</strong> con ventas de ${fmt(bestSub?.sales||0)}. Hay una oportunidad clara de ampliar esta línea.</div>`,
+    `<div class="insight-card ins-amb"><div class="ins-title">🟡 Margen global del ${pct(margin)} por debajo del objetivo 15%</div>La brecha es de ${pct(0.15-margin)}. La corrección de descuentos destructivos cubriría gran parte de esta diferencia sin cambiar precios ni reducir volumen.</div>`,
+    years.length>1?`<div class="insight-card ins-blu"><div class="ins-title">🔵 El negocio crece pero la rentabilidad no al mismo ritmo</div>Ventas de ${fmt(totalSales)} acumuladas en el período analizado. El crecimiento en pedidos es real y sostenido, pero la política de descuentos limita la conversión en beneficio.</div>`:'',
+  ].filter(Boolean).join('');
+}
+
+// ══════════════════════════════════
+//  UI HELPERS
+// ══════════════════════════════════
+function switchRole(id,btn){
+  document.querySelectorAll('.role-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.rtab').forEach(b=>b.classList.remove('active'));
+  document.getElementById('role-'+id).classList.add('active');
+  btn.classList.add('active');
+  setTimeout(()=>renderAll(),50);
+}
+
+function switchSection(role,sec,btn){
+  const prefix=role+'-';
+  document.querySelectorAll(`[id^="${prefix}"]`).forEach(p=>p.classList.remove('active'));
+  btn.closest('.section-nav').querySelectorAll('.snav').forEach(b=>b.classList.remove('active'));
+  document.getElementById(prefix+sec).classList.add('active');
+  btn.classList.add('active');
+  setTimeout(()=>renderAll(),50);
+}
+
+function drill(id){document.getElementById(id).classList.toggle('open');}
+function showModal(id){document.getElementById('modal-'+id).classList.add('open');}
+function closeModal(e,overlay){if(e.target===overlay)overlay.classList.remove('open');}
+function showSetupError(msg){const el=document.getElementById('setup-error');el.style.display='block';el.textContent=msg;}
+function setProgress(show, text=''){const el=document.getElementById('setup-progress');el.style.display=show?'block':'none';if(text)document.getElementById('progress-text').textContent=text;}
+
+function setStatusLoading(loading, rows=0){
+  const dot=document.getElementById('status-dot');
+  const text=document.getElementById('status-text');
+  const rowsEl=document.getElementById('status-rows');
+  const timeEl=document.getElementById('status-time');
+  if(loading){dot.className='status-dot loading';text.textContent='Actualizando datos...';}
+  else{dot.className='status-dot';text.textContent='Datos en tiempo real';if(rows)rowsEl.textContent=`· ${rows.toLocaleString('es-ES')} filas`;timeEl.textContent='· Actualizado: '+new Date().toLocaleTimeString('es-ES');}
+}
+
+function showDashboard(){
+  document.getElementById('setup-screen').style.display='none';
+  document.getElementById('dashboard').style.display='block';
+  setProgress(false);
+}
+
+function showSetup(){
+  document.getElementById('setup-screen').style.display='flex';
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('connect-btn').disabled=false;
+  document.getElementById('setup-error').style.display='none';
+}
+
+async function reloadData(){
+  if(!SHEET_ID){showSetup();return;}
+  try{await loadSheetData();}
+  catch(e){setStatusLoading(false);console.error(e);}
+}
+
+function exportCSV(){
+  if(!FILTERED.length){alert('No hay datos para exportar');return;}
+  const headers=Object.keys(FILTERED[0]);
+  const csv=[headers.join(','),...FILTERED.map(r=>headers.map(h=>`"${(r[h]||'').replace(/"/g,'""')}"`).join(','))].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='Superstore_export_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+}
+
+// ══════════════════════════════════
+//  MAPA COROPLÉTICO EE.UU.
+// ══════════════════════════════════
+
+// Nombre de estado → código FIPS (para cargar topología)
+const STATE_FIPS = {
+  'Alabama':'01','Alaska':'02','Arizona':'04','Arkansas':'05','California':'06',
+  'Colorado':'08','Connecticut':'09','Delaware':'10','District of Columbia':'11',
+  'Florida':'12','Georgia':'13','Hawaii':'15','Idaho':'16','Illinois':'17',
+  'Indiana':'18','Iowa':'19','Kansas':'20','Kentucky':'21','Louisiana':'22',
+  'Maine':'23','Maryland':'24','Massachusetts':'25','Michigan':'26','Minnesota':'27',
+  'Mississippi':'28','Missouri':'29','Montana':'30','Nebraska':'31','Nevada':'32',
+  'New Hampshire':'33','New Jersey':'34','New Mexico':'35','New York':'36',
+  'North Carolina':'37','North Dakota':'38','Ohio':'39','Oklahoma':'40',
+  'Oregon':'41','Pennsylvania':'42','Rhode Island':'44','South Carolina':'45',
+  'South Dakota':'46','Tennessee':'47','Texas':'48','Utah':'49','Vermont':'50',
+  'Virginia':'51','Washington':'53','West Virginia':'54','Wisconsin':'55',
+  'Wyoming':'56'
+};
+
+// Nombre abreviado para labels del mapa
+const STATE_ABBR = {
+  'Alabama':'AL','Alaska':'AK','Arizona':'AZ','Arkansas':'AR','California':'CA',
+  'Colorado':'CO','Connecticut':'CT','Delaware':'DE','District of Columbia':'DC',
+  'Florida':'FL','Georgia':'GA','Hawaii':'HI','Idaho':'ID','Illinois':'IL',
+  'Indiana':'IN','Iowa':'IA','Kansas':'KS','Kentucky':'KY','Louisiana':'LA',
+  'Maine':'ME','Maryland':'MD','Massachusetts':'MA','Michigan':'MI','Minnesota':'MN',
+  'Mississippi':'MS','Missouri':'MO','Montana':'MT','Nebraska':'NE','Nevada':'NV',
+  'New Hampshire':'NH','New Jersey':'NJ','New Mexico':'NM','New York':'NY',
+  'North Carolina':'NC','North Dakota':'ND','Ohio':'OH','Oklahoma':'OK',
+  'Oregon':'OR','Pennsylvania':'PA','Rhode Island':'RI','South Carolina':'SC',
+  'South Dakota':'SD','Tennessee':'TN','Texas':'TX','Utah':'UT','Vermont':'VT',
+  'Virginia':'VA','Washington':'WA','West Virginia':'WV','Wisconsin':'WI',
+  'Wyoming':'WY'
+};
+
+let mapLoaded = false;
+let mapTopoData = null;
+
+function marginColor(m) {
+  if (m === null || m === undefined) return '#21262d';
+  if (m < -0.05)  return '#f85149'; // rojo fuerte: pérdida >5%
+  if (m < 0)      return '#f07070'; // rojo suave: pérdida <5%
+  if (m < 0.05)   return '#d29922'; // ámbar: 0-5%
+  if (m < 0.15)   return '#8db840'; // verde claro: 5-15%
+  return '#3fb950';                  // verde: >15%
+}
+
+async function renderUSMap(stateData) {
+  const container = document.getElementById('us-map-container');
+  const svg = document.getElementById('us-map');
+  const tooltip = document.getElementById('map-tooltip');
+  if (!svg || !container) return;
+
+  // Cargar topología solo una vez
+  if (!mapTopoData) {
+    try {
+      const resp = await fetch('https://cdn.jsdelivr.net/npm/us-atlas@3/states-10m.json');
+      mapTopoData = await resp.json();
+      mapLoaded = true;
+    } catch(e) {
+      svg.innerHTML = '<text x="480" y="300" text-anchor="middle" fill="#8b949e" font-size="16" font-family="Inter,sans-serif">No se pudo cargar el mapa. Verifica tu conexión a internet.</text>';
+      return;
+    }
+  }
+
+  // Cargar librerías D3 y TopoJSON dinámicamente si no están
+  if (typeof d3 === 'undefined') {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js');
+  }
+  if (typeof topojson === 'undefined') {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js');
+  }
+
+  // Construir lookup margen por FIPS
+  const marginByFips = {};
+  const dataByFips = {};
+  Object.entries(stateData).forEach(([name, v]) => {
+    const fips = STATE_FIPS[name];
+    if (fips) {
+      marginByFips[fips] = v.sales > 0 ? v.profit / v.sales : null;
+      dataByFips[fips] = { name, ...v };
+    }
+  });
+
+  // Proyección AlbersUSA
+  const projection = d3.geoAlbersUsa().scale(1280).translate([487, 295]);
+  const path = d3.geoPath().projection(projection);
+
+  // Limpiar SVG
+  svg.innerHTML = '';
+  const svgSel = d3.select(svg);
+
+  // Añadir título accesible
+  svgSel.append('title').text('Mapa de márgenes por estado — Superstore Analytics');
+
+  // Dibujar estados
+  const features = topojson.feature(mapTopoData, mapTopoData.objects.states).features;
+
+  svgSel.selectAll('path.state')
+    .data(features)
+    .join('path')
+    .attr('class', 'state')
+    .attr('d', path)
+    .attr('fill', d => {
+      const m = marginByFips[d.id.toString().padStart(2,'0')];
+      return marginColor(m);
+    })
+    .attr('stroke', '#0d1117')
+    .attr('stroke-width', 0.8)
+    .style('cursor', 'pointer')
+    .style('transition', 'filter 0.15s')
+    .on('mouseover', function(event, d) {
+      d3.select(this).style('filter', 'brightness(1.3)');
+      const fips = d.id.toString().padStart(2,'0');
+      const info = dataByFips[fips];
+      const m = marginByFips[fips];
+      if (info) {
+        const mPct = m !== null ? (m * 100).toFixed(1) + '%' : 'Sin datos';
+        const mColor = m < 0 ? '#f85149' : m > 0.15 ? '#3fb950' : '#d29922';
+        const signal = m < 0 ? '🔴 Pérdidas' : m < 0.05 ? '🟡 Atención' : '🟢 OK';
+        tooltip.innerHTML = `
+          <div style="font-weight:600;font-size:13px;margin-bottom:6px">${info.name} (${STATE_ABBR[info.name]||''})</div>
+          <div style="display:flex;flex-direction:column;gap:4px;font-size:11px;color:#8b949e">
+            <div>Ventas: <strong style="color:#e6edf3">${fmt(info.sales)}</strong></div>
+            <div>Beneficio: <strong style="color:${mColor}">${fmt(info.profit)}</strong></div>
+            <div>Margen: <strong style="color:${mColor}">${mPct}</strong></div>
+            <div style="margin-top:3px">${signal}</div>
+          </div>`;
+        tooltip.style.display = 'block';
+      } else {
+        const name = Object.keys(STATE_FIPS).find(k=>STATE_FIPS[k]===fips)||'Estado desconocido';
+        tooltip.innerHTML = `<div style="font-weight:600;font-size:13px">${name}</div><div style="font-size:11px;color:#8b949e;margin-top:4px">Sin datos en el período seleccionado</div>`;
+        tooltip.style.display = 'block';
+      }
+      // Posicionar tooltip
+      const rect = container.getBoundingClientRect();
+      const ex = event.clientX - rect.left;
+      const ey = event.clientY - rect.top;
+      const tw = 200, th = 100;
+      tooltip.style.left = (ex + 14 + tw > rect.width ? ex - tw - 10 : ex + 14) + 'px';
+      tooltip.style.top = (ey + 14 + th > rect.height ? ey - th - 10 : ey + 14) + 'px';
+    })
+    .on('mousemove', function(event) {
+      const rect = container.getBoundingClientRect();
+      const ex = event.clientX - rect.left;
+      const ey = event.clientY - rect.top;
+      const tw = tooltip.offsetWidth || 200;
+      const th = tooltip.offsetHeight || 100;
+      tooltip.style.left = (ex + 14 + tw > rect.width ? ex - tw - 10 : ex + 14) + 'px';
+      tooltip.style.top = (ey + 14 + th > rect.height ? ey - th - 10 : ey + 14) + 'px';
+    })
+    .on('mouseleave', function() {
+      d3.select(this).style('filter', 'none');
+      tooltip.style.display = 'none';
+    });
+
+  // Borde entre estados
+  svgSel.append('path')
+    .datum(topojson.mesh(mapTopoData, mapTopoData.objects.states, (a,b)=>a!==b))
+    .attr('fill', 'none')
+    .attr('stroke', '#0d1117')
+    .attr('stroke-width', 0.5)
+    .attr('d', path);
+
+  // Etiquetas abreviatura en estados grandes
+  const bigStates = ['California','Texas','Montana','New Mexico','Arizona','Nevada','Colorado',
+    'Wyoming','Oregon','Idaho','Utah','Kansas','Nebraska','South Dakota','North Dakota',
+    'Minnesota','Iowa','Missouri','Arkansas','Louisiana','Mississippi','Alabama','Georgia',
+    'Florida','Tennessee','Kentucky','Indiana','Ohio','Michigan','Wisconsin','Illinois',
+    'New York','Pennsylvania','Virginia','North Carolina','Washington'];
+
+  svgSel.selectAll('text.state-label')
+    .data(features.filter(f => {
+      const fips = f.id.toString().padStart(2,'0');
+      const name = Object.keys(STATE_FIPS).find(k=>STATE_FIPS[k]===fips);
+      return name && bigStates.includes(name);
+    }))
+    .join('text')
+    .attr('class', 'state-label')
+    .attr('transform', d => {
+      const c = path.centroid(d);
+      return c && !isNaN(c[0]) ? `translate(${c})` : 'translate(-999,-999)';
+    })
+    .attr('text-anchor', 'middle')
+    .attr('dominant-baseline', 'central')
+    .attr('fill', '#ffffff')
+    .attr('font-size', '8')
+    .attr('font-family', 'Inter,sans-serif')
+    .attr('font-weight', '500')
+    .attr('pointer-events', 'none')
+    .text(d => {
+      const fips = d.id.toString().padStart(2,'0');
+      const name = Object.keys(STATE_FIPS).find(k=>STATE_FIPS[k]===fips);
+      return name ? (STATE_ABBR[name]||'') : '';
+    });
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = resolve; s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+// ══════════════════════════════════
+//  INICIO: recuperar sesión guardada
+// ══════════════════════════════════
+(async function init(){
+  const savedId=localStorage.getItem('ss_id');
+  const savedTab=localStorage.getItem('ss_tab');
+  if(savedId){
+    document.getElementById('sheet-url').value=savedId;
+    document.getElementById('sheet-tab').value=savedTab||'Datos_Procesados';
+    SHEET_ID=savedId; SHEET_TAB=savedTab||'Datos_Procesados';
+    try{
+      setProgress(true,'Reconectando con tu Google Sheets...');
+      document.getElementById('setup-screen').style.display='flex';
+      await loadSheetData();
+      showDashboard();
+    }catch(e){
+      setProgress(false);
+      document.getElementById('connect-btn').disabled=false;
+    }
+  }
+})();
+</script>
+</body>
+</html>
